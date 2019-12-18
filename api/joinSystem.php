@@ -2,39 +2,18 @@
 
 require_once "../database/variables.php";
 
-function play()
+function join_game()
 {
-    session_start();
-
-    $game = getGame();
-
-    print json_encode($game,JSON_PRETTY_PRINT);
+    findGame();
 }
 
-/**
- * Returns the current game the player participates in.
- */
-function getGame()
-{
 
-    $game['token'] = getToken();
-
-    $game['game'] = getGameOfUser();
-
-    return $game;
+function findGame(){
+    assignToken();
 }
 
-/**
- * Checks if the user has token.If doesn't,creates new.
- * @return string token of the user.
- */
-function getToken()
-{
-    if (!isset($_SESSION["user_name"])) {
-        http_response_code(401);
-        exit();
-    }
 
+function assignToken(){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
     $selectToken = $connection->prepare("SELECT token FROM players WHERE user_name = ? ");
@@ -46,23 +25,15 @@ function getToken()
     $result = $selectToken->get_result();
 
     if ($result->num_rows == 0) {
-        $token = create_token();
-    } else {
-        $token = $result->fetch_assoc()['token'];
+        create_token();
     }
 
     $connection->close();
 
-    return $token;
 }
 
-/**
- * Creates and returns new token.
- * If the insertion of token fails,exits with status error 500.
- * @return token
- */
-function create_token()
-{
+
+function create_token(){
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
@@ -104,10 +75,7 @@ function create_token()
     return $token;
 }
 
-/**
- * Returns the game.
- * @return array
- */
+
 function getRandomGame()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
@@ -134,10 +102,6 @@ function getRandomGame()
     return $game;
 }
 
-/**
- * Creates new game.
- * @return array
- */
 function createNewGame()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
@@ -148,22 +112,6 @@ function createNewGame()
 
     $connection -> close();
 
-}
-
-function getGameOfUser(){
-
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
-
-    $mysqli_stmt = $connection->prepare("SELECT g.game_id
-                                FROM games g INNER JOIN players p on g.game_id = p.game_id WHERE p.user_name = ?");
-
-    $mysqli_stmt -> bind_param("s",$_SESSION['user_name']);
-
-    $mysqli_stmt ->execute();
-
-    $mysqli_result = $mysqli_stmt->get_result();
-
-    return $mysqli_result -> fetch_assoc();
 }
 
 function increasePlayers($game_id){

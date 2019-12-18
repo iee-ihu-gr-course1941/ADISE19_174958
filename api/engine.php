@@ -4,6 +4,13 @@ require_once "joinSystem.php";
 
 deleteStalePlayers();//delete players that are in betting or hitting status and haven't played for 2 minutes or more.
 
+session_start();
+
+if (!isset($_SESSION["user_name"])) {
+    http_response_code(401);
+    exit();
+}
+
 $inputJSON = json_decode(file_get_contents('php://input'),TRUE);
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -27,7 +34,7 @@ switch ($request[0]){
         logout();
         break;
     case "join":
-        play();
+        join_game();
         break;
     default:
         http_response_code(404);
