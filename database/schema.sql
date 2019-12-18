@@ -245,10 +245,6 @@ CREATE TABLE IF NOT EXISTS `games` (
 
 -- Dumping data for table blackjack.games: ~0 rows (approximately)
 DELETE FROM `games`;
-/*!40000 ALTER TABLE `games` DISABLE KEYS */;
-INSERT INTO `games` (`game_id`, `games_status`, `points`, `nums_of_players`) VALUES
-	(45, 'betting', 0, 1);
-/*!40000 ALTER TABLE `games` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.my_users
 CREATE TABLE IF NOT EXISTS `my_users` (
@@ -279,10 +275,6 @@ CREATE TABLE IF NOT EXISTS `players` (
 
 -- Dumping data for table blackjack.players: ~1 rows (approximately)
 DELETE FROM `players`;
-/*!40000 ALTER TABLE `players` DISABLE KEYS */;
-INSERT INTO `players` (`user_name`, `game_id`, `token`, `last_action`, `player_status`, `points`) VALUES
-	('Barracuda120', 45, '93fa1b3a73d28b43fde1055517810098', '2019-12-18 12:51:16', 'waiting', 0);
-/*!40000 ALTER TABLE `players` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.player_hands
 CREATE TABLE IF NOT EXISTS `player_hands` (
