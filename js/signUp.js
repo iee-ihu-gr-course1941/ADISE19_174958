@@ -8,7 +8,7 @@ $("#signUpBtn").click(function () {
 
         let user_json = JSON.stringify(user);
 
-        $.ajax("api/signUpAPI.php", {
+        $.ajax("api/engine.php/signUp", {
             success: success,
             type : "POST",
             contentType: "application/json",

@@ -7,7 +7,7 @@ function signInHandler() {
     user.pass_word = $("#pass_word").val();
     let user_json = JSON.stringify(user);
 
-    $.ajax("api/signInAPI.php", {
+    $.ajax("api/engine.php/signIn", {
         success: successful_login,
         type: "PUT",
         contentType: "application/json",

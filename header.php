@@ -32,12 +32,11 @@
             <div class="collapse navbar-collapse" id="collapsibleNavbar">
 
                 <ul class="navbar-nav w-100">
-                    <li id='#special' class="nav-item"><a href="index.php" class="nav-link">Home</a></li>
                     <?php
                     session_start();
-                    if (isset($_SESSION["started"])) {
-                        print "<li class='nav-item'><a href='#' class='nav-link'>My Profile</a></li>";
-                        print "<li class='nav-item'><a href='#' class='nav-link'>Play</a></li>";
+                    if (isset($_SESSION["user_name"])) {
+                        print "<li class='nav-item'><a href='#' class='nav-link'>".$_SESSION["user_name"]."</a></li>";
+                        print "<li class='nav-item'><a href='#' class='nav-link' id='playButton'>Play</a></li>";
                         print "<li class='nav-item'><a href='#' class='nav-link'>Rank</a></li>";
                         print "<li class='nav-item'><a href='#' id='logoutBtn' class='nav-link'>Logout</a></li>";
                     }else{
@@ -52,6 +51,7 @@
     </div>
 
     <script src="js/logout.js" ></script>
+    <script src="js/play.js" ></script>
 <?php
 
 ?>

@@ -1,5 +1,5 @@
 $("#logoutBtn").click(function () {
-    $.ajax("api/logoutAPI.php",{success:logoutFunc,type:"GET"})
+    $.ajax("api/engine.php/logout",{success:logoutFunc,type:"GET"})
 });
 
 function logoutFunc(result, status, xhr){
