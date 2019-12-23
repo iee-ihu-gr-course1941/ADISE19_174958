@@ -84,8 +84,6 @@ function getRandomGame()
 
     $connection->close();
 
-    print_r($game);
-
     return $game;
 }
 

@@ -6,7 +6,7 @@ require_once "../database/variables.php";
 
 deleteStalePlayers();//delete players that are in betting or hitting status and haven't played for 2 minutes or more.
 
-updateGames();
+updateGames();//update each game's status
 
 session_start();
 
@@ -39,6 +39,9 @@ switch ($request[0]){
     case "token":
         isLogin();
         token();
+        break;
+    case "players_hands":
+        playersHands();
         break;
     default:
         http_response_code(404);
@@ -73,6 +76,10 @@ function updateGames(){
     while($row = $mysqli_result->fetch_assoc()){
         if($row["games_status"] == "initialized"){
             checkInitialized($row["game_id"]);
+        }else if ($row["games_status"] == "betting") {
+            checkBetting($row["game_id"]);
+        }else if ($row["games_status"] == "players_turn") {
+            checkPlayersTurn($row["game_id"]);
         }
     }
 
@@ -81,6 +88,8 @@ function updateGames(){
 
 function checkInitialized($game_id){
     $connection = mysqli_connect(HOST, USER, PASSWORD,DATABASE);
+
+    $connection->begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
 
     $mysqli_stmt = $connection->prepare("SELECT nums_of_players FROM games WHERE game_id = ? ");
 
@@ -94,12 +103,57 @@ function checkInitialized($game_id){
         changeStatusTo($game_id,"betting");
     }
 
+    $connection -> commit();
+
     $connection -> close();
 }
 
 function checkBetting($game_id){
+    $connection = mysqli_connect(HOST, USER, PASSWORD,DATABASE);
 
+    $connection->begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
+
+    $mysqli_stmt = $connection->prepare("SELECT player_status FROM players WHERE game_id = ? AND player_status = 'betting' ");
+
+    $mysqli_stmt -> bind_param("s",$game_id);
+
+    $mysqli_stmt -> execute();
+
+    if ($mysqli_stmt->get_result()->num_rows == 0) {
+        changeStatusTo($game_id,'players_turn');
+    }
+
+    $connection->commit();
+
+    $connection -> close();
 }
+
+
+function checkPlayersTurn($game_id){
+    $connection = mysqli_connect(HOST,USER,PASSWORD,DATABASE);
+
+    $connection -> begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
+
+    $checkIfAllPlayersDone = $connection -> prepare("SELECT * FROM players p WHERE p.player_status = 'done_betting' AND last_action <= (SELECT MIN(p2.last_action) FROM players p2 WHERE p2.player_status = 'done_betting') ");
+
+    $checkIfAllPlayersDone -> execute();
+
+    if ($checkIfAllPlayersDone->num_rows == 0) {
+        changeStatusTo($game_id,"computer_turn");
+    }else{
+        $isTherePlayerPlaying = $connection -> prepare("SELECT * FROM players WHERE player_status = 'hitting' ");
+        $isTherePlayerPlaying->execute();
+        if ($isTherePlayerPlaying->num_rows == 0) {
+            $nextPlayer = $connection -> prepare("UPDATE players p set p.player_status = 'hitting' WHERE p.player_status = 'done_betting' AND last_action <= (SELECT MIN(p2.last_action) FROM players p2 WHERE p2.player_status = 'done_betting')");
+            $nextPlayer -> execute();
+        }
+    }
+
+    $connection->commit();
+
+    $connection -> close();
+}
+
 
 function changeStatusTo($game_id,$status){
 
