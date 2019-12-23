@@ -1,15 +1,14 @@
 <?php
 require_once "entranceSystem.php";
 require_once "joinSystem.php";
+require_once "gameSystem.php";
+require_once "../database/variables.php";
 
 deleteStalePlayers();//delete players that are in betting or hitting status and haven't played for 2 minutes or more.
 
-session_start();
+updateGames();
 
-if (!isset($_SESSION["user_name"])) {
-    http_response_code(401);
-    exit();
-}
+session_start();
 
 $inputJSON = json_decode(file_get_contents('php://input'),TRUE);
 
@@ -34,7 +33,12 @@ switch ($request[0]){
         logout();
         break;
     case "join":
+        isLogin();
         join_game();
+        break;
+    case "token":
+        isLogin();
+        token();
         break;
     default:
         http_response_code(404);
@@ -46,24 +50,57 @@ switch ($request[0]){
  * If the user that fired the request was one of the players that got deleted,his/her token is deleted from SESSION.
  */
 function deleteStalePlayers(){
-    require_once "../database/variables.php";
 
+
+}
+
+function isLogin(){
+    if (!isset($_SESSION["user_name"])) {
+        http_response_code(401);
+        exit();
+    }
+}
+
+function updateGames(){
     $connection = mysqli_connect(HOST, USER, PASSWORD,DATABASE);
 
-    $currentPlayerIsStale = $connection
-        ->prepare("SELECT * FROM players WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 2 AND (player_status = 'betting' || player_status = 'hitting') AND user_name = ? ");
-    $currentPlayerIsStale->bind_param("s",$_SESSION["user_name"]);
+    $selectGames = $connection->prepare("SELECT * FROM games ");
 
-    $deleteStalePlayers = $connection
-        ->prepare("DELETE FROM players WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 2 AND (player_status = 'betting' || player_status = 'hitting') ");
+    $selectGames -> execute();
 
-    $deleteStalePlayers->execute();
+    $mysqli_result = $selectGames->get_result();
 
-    $currentPlayerIsStale->execute();
-
-    if ($currentPlayerIsStale->num_rows() == 1) {
-        unset($_SESSION['token']);
+    while($row = $mysqli_result->fetch_assoc()){
+        if($row["games_status"] == "initialized"){
+            checkInitialized($row["game_id"]);
+        }
     }
 
-    $connection->close();
+    $connection -> close();
+}
+
+function checkInitialized($game_id){
+    $connection = mysqli_connect(HOST, USER, PASSWORD,DATABASE);
+
+    $mysqli_stmt = $connection->prepare("SELECT nums_of_players FROM games WHERE game_id = ? ");
+
+    $mysqli_stmt -> bind_param("i",$game_id);
+
+    $mysqli_stmt -> execute();
+
+    $result = $mysqli_stmt->get_result();
+
+    if ($result->fetch_assoc()['num_of_players'] > 0) {
+        changeStatusTo($game_id,"betting");
+    }
+
+    $connection -> close();
+}
+
+function checkBetting($game_id){
+
+}
+
+function changeStatusTo($game_id,$status){
+
 }

@@ -34,7 +34,6 @@ function assignToken(){
 
 
 function create_token(){
-
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
     $insertToken = $connection->prepare("INSERT INTO players(user_name, game_id, token, last_action, player_status) VALUES (?,?,MD5(CONCAT(user_name,NOW())),?,?)");
@@ -48,7 +47,7 @@ function create_token(){
     $last_action = date('Y/m/d h:i:s a', time());
 
     switch ($game['games_status']) {
-        case null :
+        case 'initialized' :
             $player_status = "betting";
             break;
         default :
@@ -57,22 +56,9 @@ function create_token(){
 
     $insertToken->bind_param("siss", $user_name, $game['game_id'], $last_action, $player_status);
 
-    if (!$insertToken->execute()) {
-        http_response_code(500);
-
-        exit();
-    }
-
-
-    $selectToken = $connection->prepare("SELECT token FROM players WHERE user_name = ?");
-    $selectToken->bind_param("s", $user_name);
-    $selectToken->execute();
-
-    $token = $selectToken->get_result()->fetch_assoc()['token'];
+    $insertToken -> execute();
 
     $connection->close();
-
-    return $token;
 }
 
 
@@ -80,7 +66,7 @@ function getRandomGame()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $mysqli_stmt = $connection->prepare("SELECT * FROM games WHERE nums_of_players < 4 LIMIT 1");
+    $mysqli_stmt = $connection->prepare("SELECT * FROM games WHERE nums_of_players < 3 LIMIT 1");
 
     $mysqli_stmt->execute();
 
@@ -96,8 +82,9 @@ function getRandomGame()
         $game = $row;
     }
 
-
     $connection->close();
+
+    print_r($game);
 
     return $game;
 }
@@ -122,6 +109,9 @@ function increasePlayers($game_id){
     $mysqli_stmt -> bind_param("i",$game_id);
 
     if(!$mysqli_stmt -> execute()){
+//        foreach ($connection->error_list as $error) {
+//            print_r($error);
+//        }
         http_response_code(500);
         exit();
     }

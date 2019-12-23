@@ -1,7 +1,6 @@
 <?php
 
 function logout(){
-    session_start();
 
     session_destroy();
 
@@ -22,7 +21,6 @@ function signIn($user_name,$pass_word){
     $result = $mysqli_stmt->get_result();
 
     if (mysqli_num_rows($result) == 1) {
-        session_start();
         $_SESSION["user_name"] = $user_name;
         print "index.php";
     }else{

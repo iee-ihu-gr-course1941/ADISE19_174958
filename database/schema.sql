@@ -17,13 +17,14 @@ CREATE DATABASE IF NOT EXISTS `blackjack` /*!40100 DEFAULT CHARACTER SET utf8mb4
 USE `blackjack`;
 
 -- Dumping structure for table blackjack.cards
+DROP TABLE IF EXISTS `cards`;
 CREATE TABLE IF NOT EXISTS `cards` (
   `card_color` enum('C','D','H','S') NOT NULL,
   `card_value` enum('2','3','4','5','6','7','8','9','10','J','Q','K','A') NOT NULL,
   PRIMARY KEY (`card_color`,`card_value`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Dumping data for table blackjack.cards: ~52 rows (approximately)
+-- Dumping data for table blackjack.cards: ~40 rows (approximately)
 DELETE FROM `cards`;
 /*!40000 ALTER TABLE `cards` DISABLE KEYS */;
 INSERT INTO `cards` (`card_color`, `card_value`) VALUES
@@ -82,6 +83,7 @@ INSERT INTO `cards` (`card_color`, `card_value`) VALUES
 /*!40000 ALTER TABLE `cards` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.cards_images
+DROP TABLE IF EXISTS `cards_images`;
 CREATE TABLE IF NOT EXISTS `cards_images` (
   `card_color` enum('C','D','H','S') NOT NULL,
   `card_value` enum('2','3','4','5','6','7','8','9','10','J','Q','K','A') NOT NULL,
@@ -150,6 +152,7 @@ INSERT INTO `cards_images` (`card_color`, `card_value`, `image_name`) VALUES
 /*!40000 ALTER TABLE `cards_images` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.cards_points
+DROP TABLE IF EXISTS `cards_points`;
 CREATE TABLE IF NOT EXISTS `cards_points` (
   `card_color` enum('C','D','H','S') NOT NULL,
   `card_value` enum('2','3','4','5','6','7','8','9','10','J','Q','K','A') NOT NULL,
@@ -218,6 +221,7 @@ INSERT INTO `cards_points` (`card_color`, `card_value`, `points`) VALUES
 /*!40000 ALTER TABLE `cards_points` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.computer_hands
+DROP TABLE IF EXISTS `computer_hands`;
 CREATE TABLE IF NOT EXISTS `computer_hands` (
   `game_id` int(11) NOT NULL,
   `card_color` enum('C','D','H','S') NOT NULL,
@@ -234,19 +238,23 @@ DELETE FROM `computer_hands`;
 /*!40000 ALTER TABLE `computer_hands` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.games
+DROP TABLE IF EXISTS `games`;
 CREATE TABLE IF NOT EXISTS `games` (
   `game_id` int(11) NOT NULL AUTO_INCREMENT,
-  `games_status` enum('betting','plaers_turn','computer_turn') DEFAULT NULL,
+  `games_status` enum('initialized','betting','players_turn','computer_turn') DEFAULT NULL,
   `points` tinyint(4) DEFAULT 0,
   `nums_of_players` tinyint(4) DEFAULT 0,
   PRIMARY KEY (`game_id`),
   CONSTRAINT `games_number_of_players_maximum_3` CHECK (`nums_of_players` <= 3)
-) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8;
 
 -- Dumping data for table blackjack.games: ~0 rows (approximately)
 DELETE FROM `games`;
+/*!40000 ALTER TABLE `games` DISABLE KEYS */;
+/*!40000 ALTER TABLE `games` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.my_users
+DROP TABLE IF EXISTS `my_users`;
 CREATE TABLE IF NOT EXISTS `my_users` (
   `user_name` varchar(30) NOT NULL,
   `pass_word` varchar(30) NOT NULL,
@@ -254,17 +262,19 @@ CREATE TABLE IF NOT EXISTS `my_users` (
   CONSTRAINT `pass_word_length` CHECK (octet_length(`pass_word`) > 8)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Dumping data for table blackjack.my_users: ~2 rows (approximately)
+-- Dumping data for table blackjack.my_users: ~0 rows (approximately)
 DELETE FROM `my_users`;
-
+/*!40000 ALTER TABLE `my_users` DISABLE KEYS */;
+/*!40000 ALTER TABLE `my_users` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.players
+DROP TABLE IF EXISTS `players`;
 CREATE TABLE IF NOT EXISTS `players` (
   `user_name` varchar(30) NOT NULL,
   `game_id` int(11) NOT NULL,
   `token` varchar(1000) NOT NULL,
   `last_action` datetime DEFAULT NULL,
-  `player_status` enum('waiting','hitting','betting','overflow','done') NOT NULL,
+  `player_status` enum('waiting','hitting','betting','overflow','done_betting','done_hitting') NOT NULL,
   `points` tinyint(4) DEFAULT 0,
   PRIMARY KEY (`user_name`,`game_id`),
   UNIQUE KEY `unique_user_name` (`user_name`),
@@ -273,10 +283,13 @@ CREATE TABLE IF NOT EXISTS `players` (
   CONSTRAINT `fk_user_name` FOREIGN KEY (`user_name`) REFERENCES `my_users` (`user_name`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Dumping data for table blackjack.players: ~1 rows (approximately)
+-- Dumping data for table blackjack.players: ~0 rows (approximately)
 DELETE FROM `players`;
+/*!40000 ALTER TABLE `players` DISABLE KEYS */;
+/*!40000 ALTER TABLE `players` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.player_hands
+DROP TABLE IF EXISTS `player_hands`;
 CREATE TABLE IF NOT EXISTS `player_hands` (
   `user_name` varchar(30) NOT NULL,
   `card_color` enum('C','D','H','S') NOT NULL,

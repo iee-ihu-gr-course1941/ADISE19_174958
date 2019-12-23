@@ -6,10 +6,10 @@ $("#playButton").click(function () {
 
 });
 
-function join(game, status, xhr){
-    prepareTable();
+function join(response, status, xhr){
+    setInterval(updateTables,500);
 }
 
-function prepareTable(){
+function updateTables(){
     
 }
