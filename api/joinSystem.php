@@ -91,7 +91,7 @@ function createNewGame()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $mysqli_stmt = $connection->prepare("INSERT INTO games(games_status, points, nums_of_players) VALUES('betting', 0, 0) ");
+    $mysqli_stmt = $connection->prepare("INSERT INTO games(games_status, points, nums_of_players) VALUES('initialized', 0, 0) ");
 
     $mysqli_stmt->execute();
 
