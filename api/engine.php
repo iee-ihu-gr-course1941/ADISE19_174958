@@ -43,6 +43,12 @@ switch ($request[0]){
     case "players_hands":
         playersHands();
         break;
+    case "game_status":
+        gameStatus();
+        break;
+    case "players":
+        players();
+        break;
     default:
         http_response_code(404);
         exit();
@@ -68,6 +74,10 @@ function updateGames(){
     $connection = mysqli_connect(HOST, USER, PASSWORD,DATABASE);
 
     $selectGames = $connection->prepare("SELECT * FROM games ");
+
+    foreach($connection->error_list as $error){
+        print_r($error);
+    }
 
     $selectGames -> execute();
 
@@ -99,7 +109,7 @@ function checkInitialized($game_id){
 
     $result = $mysqli_stmt->get_result();
 
-    if ($result->fetch_assoc()['num_of_players'] > 0) {
+    if ($result->fetch_assoc()['nums_of_players'] > 0) {
         changeStatusTo($game_id,"betting");
     }
 
@@ -156,5 +166,13 @@ function checkPlayersTurn($game_id){
 
 
 function changeStatusTo($game_id,$status){
+    $connection = mysqli_connect(HOST,USER,PASSWORD,DATABASE);
 
+    $mysqli_stmt = $connection->prepare("UPDATE games SET games_status = ? WHERE game_id = ?");
+
+    $mysqli_stmt->bind_param("si", $status, $game_id);
+
+    $mysqli_stmt -> execute();
+
+    $connection -> close();
 }
