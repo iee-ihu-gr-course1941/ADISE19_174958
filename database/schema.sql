@@ -258,6 +258,7 @@ DROP TABLE IF EXISTS `my_users`;
 CREATE TABLE IF NOT EXISTS `my_users` (
   `user_name` varchar(30) NOT NULL,
   `pass_word` varchar(30) NOT NULL,
+  `balance` BIGINT DEFAULT 100,
   PRIMARY KEY (`user_name`),
   CONSTRAINT `pass_word_length` CHECK (octet_length(`pass_word`) > 8)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
