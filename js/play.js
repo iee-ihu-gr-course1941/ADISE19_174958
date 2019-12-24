@@ -1,5 +1,6 @@
 var token = null;
 var currentUsername = null;
+var asker = null;
 
 $("#playButton").click(function () {
     $.ajax("api/engine.php/join", {
@@ -22,13 +23,11 @@ function assignToken(response, status, xhr) {
     token = returnedToken.token;
     currentUsername = returnedToken.user_name;
 
-    setInterval(checkGame, 1000);
+    asker = setInterval(checkGame, 1000);
 }
 
 function loadTable(response, status, xmlHttpRequest) {
     let users = JSON.parse(response);
-
-    previousUsers  = users;
 
     let players = $(".players").children(".player");
 
@@ -99,7 +98,18 @@ function checkLeftUsers(users,table){
         return true;
     });
     for (let index = 0; index < leftUsers.length; index++) {
+        if ($(leftUsers[index]).find(".player_name").text() === currentUsername) {
+            stopGame();
+        }
         $(leftUsers[index]).addClass("disappear");
+        $(leftUsers[index]).removeClass($(leftUsers[index]).find(".player_name").text());
+    }
+}
+
+function stopGame(){
+    $(".content").addClass("disappear");
+    if (asker != null) {
+        clearInterval(asker);
     }
 }
 
