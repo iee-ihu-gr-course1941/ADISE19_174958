@@ -2,14 +2,15 @@
 
 require_once "../database/variables.php";
 
-function token(){
+function token()
+{
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $selectToken = $connection->prepare("SELECT token FROM players WHERE user_name = ? ");
+    $selectToken = $connection->prepare("SELECT token,user_name FROM players WHERE user_name = ? ");
 
     $selectToken->bind_param("s", $_SESSION["user_name"]);
 
-    $selectToken -> execute();
+    $selectToken->execute();
 
     $mysqli_result = $selectToken->get_result();
 
@@ -18,21 +19,23 @@ function token(){
         exit();
     }
 
-    print json_encode($mysqli_result->fetch_assoc(),JSON_PRETTY_PRINT);
+    print json_encode($mysqli_result->fetch_assoc(), JSON_PRETTY_PRINT);
 
+    $connection -> close();
 }
 
 
-function playersHands(){
+function playersHands()
+{
     $gameId = getUsersGameId();
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $selectPlayersHands = $connection -> prepare("SELECT p.user_name,ph.card_color,ph.card_value FROM players p INNER JOIN player_hands ph on p.user_name = ph.user_name INNER JOIN cards_images ci on ph.card_color = ci.card_color AND ph.card_value = ci.card_value WHERE game_id = ?");
+    $selectPlayersHands = $connection->prepare("SELECT p.user_name,ph.card_color,ph.card_value FROM players p LEFT JOIN player_hands ph on p.user_name = ph.user_name INNER JOIN cards_images ci on ph.card_color = ci.card_color AND ph.card_value = ci.card_value WHERE game_id = ?");
 
-    $selectPlayersHands -> bind_param("i",$gameId);
+    $selectPlayersHands->bind_param("i", $gameId);
 
-    $selectPlayersHands -> execute();
+    $selectPlayersHands->execute();
 
     $mysqli_result = $selectPlayersHands->get_result();
 
@@ -48,31 +51,74 @@ function playersHands(){
     print json_encode($rows, JSON_PRETTY_PRINT);
 
 
-
-
-    $connection -> close();
+    $connection->close();
 
 }
 
+function gameStatus()
+{
+    $gameId = getUsersGameId();
 
-function getUsersGameId(){
-    if (!isset($_SERVER['HTTP_TOKEN'])) {
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+
+    $selectStatus = $connection->prepare("SELECT games_status FROM games WHERE game_id = ?");
+    $selectStatus->bind_param("i", $gameId);
+
+    $selectStatus->execute();
+
+    $mysqli_result = $selectStatus->get_result();
+
+    print json_encode($mysqli_result->fetch_assoc(),JSON_PRETTY_PRINT);
+
+    $connection->close();
+}
+
+function players(){
+    $gameId = getUsersGameId();
+
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+
+    $mysqli_stmt = $connection->prepare("SELECT u.user_name,u.balance,p.player_status,p.points FROM players p INNER JOIN my_users u ON p.user_name = u.user_name  WHERE game_id = ?");
+
+    $mysqli_stmt -> bind_param("i",$gameId);
+
+    $mysqli_stmt->execute();
+
+    $result = $mysqli_stmt->get_result();
+
+    $rows[] = array();
+
+    $counter = 0;
+
+    while ($row = $result->fetch_assoc()) {
+        $rows[$counter] = $row;
+        $counter++;
+    }
+
+    print json_encode($rows, JSON_PRETTY_PRINT);
+
+    $connection->close();
+}
+
+function getUsersGameId()
+{
+    $token = apache_request_headers()['TOKEN'];
+
+    if (!$token) {
         http_response_code(400);
         exit();
     }
-    $token = $_SERVER['HTTP_TOKEN'];
-
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
     $mysqli_stmt = $connection->prepare("SELECT game_id FROM players WHERE token = ?");
 
-    $mysqli_stmt -> bind_param("s",$token);
+    $mysqli_stmt->bind_param("s", $token);
 
-    $mysqli_stmt -> execute();
+    $mysqli_stmt->execute();
 
     $game_id = $mysqli_stmt->get_result()->fetch_assoc()['game_id'];
 
-    $connection -> close();
+    $connection->close();
 
     return $game_id;
 }
