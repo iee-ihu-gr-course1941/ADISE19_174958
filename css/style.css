@@ -10,3 +10,7 @@
 .appear{
     visibility: inherit;
 }
+
+.my_card{
+    height: 150px;
+}

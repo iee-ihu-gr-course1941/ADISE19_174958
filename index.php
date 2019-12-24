@@ -3,7 +3,7 @@
 ?>
 
 
-<div class="row justify-content-center content disappear">
+<div class="row justify-content-center content gameView disappear">
     <div class="col-12 table mt-2">
         <div class="row computer ">
             <div class="col-12 d-flex justify-content-center" >
