@@ -1,0 +1,12 @@
+.splitter{
+    width: 100%;
+    height: 300px;
+}
+
+.disappear {
+    visibility: hidden;
+}
+
+.appear{
+    visibility: inherit;
+}
