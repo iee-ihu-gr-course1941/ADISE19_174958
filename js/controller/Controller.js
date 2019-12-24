@@ -18,7 +18,7 @@ class Controller {
     }
 
     _updateGame(response){
-        this.game = new Game(response.status, response.players, response.points, response.cards);
+        this.game = JSON.parse(response);
         this.view.update(this.game);
         if (!this.game.isPlayer(this.username)) {
             this.view.close();

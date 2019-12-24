@@ -25,8 +25,11 @@ function getGame(token){
     let game = null;
     $.ajax("api/engine.php/game", {
         type: "GET",
+        beforeSend: function(xhr){
+            xhr.setRequestHeader("TOKEN",token)
+        },
         success: function (response) {
-            game = new Game(response.status, response.players, response.points, response.cards);
+            game = JSON.parse(response);
         }
     });
     return game;

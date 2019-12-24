@@ -24,80 +24,85 @@ function token()
     $connection -> close();
 }
 
-
-function playersHands()
-{
+function game(){
     $gameId = getUsersGameId();
 
+    $response = array();
+    $game = getGame($gameId);
+    $response['_status'] = $game['status'];
+    $response['_players'] = getPlayers($gameId);
+    $response['_points'] = $game['points'];
+    $response['_cards'] = getGameCards($gameId);
+}
+
+function getPlayers($gameId){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $selectPlayersHands = $connection->prepare("SELECT p.user_name,ph.card_color,ph.card_value FROM players p LEFT JOIN player_hands ph on p.user_name = ph.user_name INNER JOIN cards_images ci on ph.card_color = ci.card_color AND ph.card_value = ci.card_value WHERE game_id = ?");
+    $players = array();
 
-    $selectPlayersHands->bind_param("i", $gameId);
+    $playersInfo = $connection->prepare("SELECT p.user_name as _username,player_status as _status,points as _points ,balance as _balance FROM players p INNER JOIN my_users u ON p.user_name = u.user_name WHERE game_id = ?");
+    $playersInfo->bind_param("i", $gameId);
+    $playersInfo->execute();
+    $result = $playersInfo->get_result();
 
-    $selectPlayersHands->execute();
+    $playerCards = $connection->prepare("SELECT 'imgs/'||image_name||'.png' AS card FROM player_hands ph INNER JOIN cards_images ci ON ci.card_color = ph.card_color AND ci.card_value = ph.card_value WHERE user_name = ?");
 
-    $mysqli_result = $selectPlayersHands->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $player = array();
+        $cards = array();
+        $player['_username'] = $row['_username'];
+        $player['_status'] = $row['_status'];
+        $player['_points'] = $row['_points'];
+        $player['_balance'] = $row['_balance'];
+        $playerCards->bind_param("s", $player['_username']);
+        $playerCards->execute();
+        $cardsResult = $playerCards->get_result();
 
-    $rows[] = array();
+        while ($card = $cardsResult->fetch_assoc()) {
+            array_push($cards, $card['card']);
+        }
 
-    $counter = 0;
+        $player['cards'] = $cards;
 
-    while ($row = $mysqli_result->fetch_assoc()) {
-        $rows[$counter] = $row;
-        $counter++;
+        array_push($players, $player);
     }
-
-    print json_encode($rows, JSON_PRETTY_PRINT);
-
 
     $connection->close();
 
+    return $players;
 }
 
-function gameStatus()
-{
-    $gameId = getUsersGameId();
-
+function getGame($gameId){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $selectStatus = $connection->prepare("SELECT games_status FROM games WHERE game_id = ?");
+    $selectStatus = $connection->prepare("SELECT games_status as status ,points FROM games WHERE game_id = ?");
+
     $selectStatus->bind_param("i", $gameId);
 
     $selectStatus->execute();
 
-    $mysqli_result = $selectStatus->get_result();
-
-    print json_encode($mysqli_result->fetch_assoc(),JSON_PRETTY_PRINT);
+    $game = $selectStatus->get_result()->fetch_assoc();
 
     $connection->close();
+
+    return $game;
 }
 
-function players(){
-    $gameId = getUsersGameId();
-
+function getGameCards($gameId){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+    $computerHand = $connection->prepare("SELECT 'imgs/'||image_name||'.png' as card FROM computer_hands ch INNER JOIN cards_images ci ON ci.card_color = ch.card_color AND ci.card_value = ch.card_value WHERE game_id = ?");
+    $computerHand->bind_param("i", $gameId);
+    $computerHand -> execute();
 
-    $mysqli_stmt = $connection->prepare("SELECT u.user_name,u.balance,p.player_status,p.points FROM players p INNER JOIN my_users u ON p.user_name = u.user_name  WHERE game_id = ?");
+    $cards = array();
 
-    $mysqli_stmt -> bind_param("i",$gameId);
+    $computerCards = $computerHand->get_result();
 
-    $mysqli_stmt->execute();
-
-    $result = $mysqli_stmt->get_result();
-
-    $rows[] = array();
-
-    $counter = 0;
-
-    while ($row = $result->fetch_assoc()) {
-        $rows[$counter] = $row;
-        $counter++;
+    while ($card = $computerCards->fetch_assoc()) {
+        array_push($cards, $card['card']);
     }
 
-    print json_encode($rows, JSON_PRETTY_PRINT);
-
-    $connection->close();
+    return $cards;
 }
 
 function getUsersGameId()
