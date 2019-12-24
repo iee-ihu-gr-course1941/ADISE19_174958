@@ -28,9 +28,10 @@ function assignToken(response, status, xhr) {
 function loadTable(response, status, xmlHttpRequest) {
     let users = JSON.parse(response);
 
+    previousUsers  = users;
+
     let players = $(".players").children(".player");
 
-    let index = 0;
 
     users.forEach((user) => {
             let usersDiv = $("." + user.user_name);
@@ -42,6 +43,8 @@ function loadTable(response, status, xmlHttpRequest) {
             }
         }
     );
+
+    checkLeftUsers(users,players);
 
 }
 
@@ -84,6 +87,20 @@ function updateUserData(user, table) {
         $(playerDiv).find(".points").html("Status : " + user.points).addClass("text-white")
     }
 
+}
+
+function checkLeftUsers(users,table){
+    let leftUsers = table.filter((row)=>{
+        for (user of users) {
+            if (user.user_name === $(table[row]).find(".player_name").text()) {
+                return false;
+            }
+        }
+        return true;
+    });
+    for (let index = 0; index < leftUsers.length; index++) {
+        $(leftUsers[index]).addClass("disappear");
+    }
 }
 
 function checkGame() {
