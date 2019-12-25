@@ -190,9 +190,7 @@ function bet($amount){
         exit();
     }
 
-    if ($amount <= 0) {
-        exit();
-    }
+    updateLastAction($token);
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
@@ -221,4 +219,17 @@ function bet($amount){
     $connection->commit();
 
     $connection->close();
+}
+
+function updateLastAction($token){
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+
+    $mysqli_stmt = $connection->prepare("UPDATE players SET last_action = NOW() WHERE token = ?");
+
+    $mysqli_stmt->bind_param("s",$token);
+
+    $mysqli_stmt->execute();
+
+    $connection->close();
+
 }

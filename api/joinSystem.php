@@ -36,15 +36,13 @@ function assignToken(){
 function create_token(){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $insertToken = $connection->prepare("INSERT INTO players(user_name, game_id, token, last_action, player_status) VALUES (?,?,MD5(CONCAT(user_name,NOW())),?,?)");
+    $insertToken = $connection->prepare("INSERT INTO players(user_name, game_id, token, player_status) VALUES (?,?,MD5(CONCAT(user_name,NOW())),?)");
 
     $game = getRandomGame();
 
     increasePlayers($game['game_id']);
 
     $user_name = $_SESSION["user_name"];
-
-    $last_action = date('Y/m/d h:i:s a', time());
 
     switch ($game['games_status']) {
         case 'initialized' :
@@ -54,7 +52,7 @@ function create_token(){
             $player_status = "waiting";
     }
 
-    $insertToken->bind_param("siss", $user_name, $game['game_id'], $last_action, $player_status);
+    $insertToken->bind_param("sis", $user_name, $game['game_id'], $player_status);
 
     $insertToken -> execute();
 

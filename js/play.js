@@ -26,7 +26,6 @@ function assignToken(response, status, xhr) {
         $.ajax("api/engine.php/game",
             {
                 success: (response) => {
-                    console.log(response);
                     let game = JSON.parse(response);
                     game.user = getUser(token);
                     controller.updateGame(game);

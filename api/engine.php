@@ -67,9 +67,16 @@ switch ($request[0]) {
  * Deletes all players that have been unresponsive for 2 minute or more.
  * If the user that fired the request was one of the players that got deleted,his/her token is deleted from SESSION.
  */
-function deleteStalePlayers()
-{
+function deleteStalePlayers(){
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
+    $mysqli_stmt = $connection->prepare("DELETE FROM players WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 2 AND player_status != 'waiting' ");
+
+    $mysqli_stmt->execute();
+
+    $mysqli_stmt->affected_rows;
+
+    $connection->close();
 
 }
 
