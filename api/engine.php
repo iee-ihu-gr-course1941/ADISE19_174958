@@ -43,6 +43,21 @@ switch ($request[0]) {
     case "game":
         game();
         break;
+    case "user":
+        user();
+        break;
+    case "bet":
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'GET') {
+            canBet();
+        }else if($method === 'POST'){
+            if (!isset($_POST['amount'])) {
+                http_response_code(400);
+                exit();
+            }
+            bet($_POST['amount']);
+        }
+        break;
     default:
         http_response_code(404);
         exit();
@@ -144,16 +159,19 @@ function checkPlayersTurn($game_id)
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
-    $checkIfAllPlayersDone = $connection->prepare("SELECT * FROM players p WHERE p.player_status = 'done_betting' AND last_action <= (SELECT MIN(p2.last_action) FROM players p2 WHERE p2.player_status = 'done_betting') ");
-
+    $checkIfAllPlayersDone = $connection->prepare("SELECT * FROM players WHERE player_status = 'hitting' || player_status = 'done_betting' AND game_id = ?");
+    $checkIfAllPlayersDone->bind_param("i", $game_id);
     $checkIfAllPlayersDone->execute();
 
-    if ($checkIfAllPlayersDone->num_rows == 0) {
+    $result = $checkIfAllPlayersDone->get_result();
+
+    if ($result->num_rows == 0) {
         changeStatusTo($game_id, "computer_turn");
     } else {
         $isTherePlayerPlaying = $connection->prepare("SELECT * FROM players WHERE player_status = 'hitting' ");
         $isTherePlayerPlaying->execute();
-        if ($isTherePlayerPlaying->num_rows == 0) {
+        $mysqli_result = $isTherePlayerPlaying->get_result();
+        if ($mysqli_result->num_rows == 0) {
             $nextPlayer = $connection->prepare("UPDATE players p set p.player_status = 'hitting' WHERE p.player_status = 'done_betting' AND last_action <= (SELECT MIN(p2.last_action) FROM players p2 WHERE p2.player_status = 'done_betting')");
             $nextPlayer->execute();
         }

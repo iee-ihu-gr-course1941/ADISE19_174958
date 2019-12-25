@@ -21,26 +21,30 @@ function token()
 
     print json_encode($mysqli_result->fetch_assoc(), JSON_PRETTY_PRINT);
 
-    $connection -> close();
+    $connection->close();
 }
 
-function game(){
+function game()
+{
     $gameId = getUsersGameId();
 
     $response = array();
     $game = getGame($gameId);
-    $response['_status'] = $game['status'];
-    $response['_players'] = getPlayers($gameId);
-    $response['_points'] = $game['points'];
-    $response['_cards'] = getGameCards($gameId);
+    $response['status'] = $game['status'];
+    $response['players'] = getPlayers($gameId);
+    $response['points'] = $game['points'];
+    $response['cards'] = getGameCards($gameId);
+
+    print json_encode($response, JSON_PRETTY_PRINT);
 }
 
-function getPlayers($gameId){
+function getPlayers($gameId)
+{
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
     $players = array();
 
-    $playersInfo = $connection->prepare("SELECT p.user_name as _username,player_status as _status,points as _points ,balance as _balance FROM players p INNER JOIN my_users u ON p.user_name = u.user_name WHERE game_id = ?");
+    $playersInfo = $connection->prepare("SELECT p.user_name as username,player_status as status,points ,balance FROM players p INNER JOIN my_users u ON p.user_name = u.user_name WHERE game_id = ?");
     $playersInfo->bind_param("i", $gameId);
     $playersInfo->execute();
     $result = $playersInfo->get_result();
@@ -50,11 +54,11 @@ function getPlayers($gameId){
     while ($row = $result->fetch_assoc()) {
         $player = array();
         $cards = array();
-        $player['_username'] = $row['_username'];
-        $player['_status'] = $row['_status'];
-        $player['_points'] = $row['_points'];
-        $player['_balance'] = $row['_balance'];
-        $playerCards->bind_param("s", $player['_username']);
+        $player['username'] = $row['username'];
+        $player['status'] = $row['status'];
+        $player['points'] = $row['points'];
+        $player['balance'] = $row['balance'];
+        $playerCards->bind_param("s", $player['username']);
         $playerCards->execute();
         $cardsResult = $playerCards->get_result();
 
@@ -72,7 +76,8 @@ function getPlayers($gameId){
     return $players;
 }
 
-function getGame($gameId){
+function getGame($gameId)
+{
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
     $selectStatus = $connection->prepare("SELECT games_status as status ,points FROM games WHERE game_id = ?");
@@ -88,11 +93,12 @@ function getGame($gameId){
     return $game;
 }
 
-function getGameCards($gameId){
+function getGameCards($gameId)
+{
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
     $computerHand = $connection->prepare("SELECT 'imgs/'||image_name||'.png' as card FROM computer_hands ch INNER JOIN cards_images ci ON ci.card_color = ch.card_color AND ci.card_value = ch.card_value WHERE game_id = ?");
     $computerHand->bind_param("i", $gameId);
-    $computerHand -> execute();
+    $computerHand->execute();
 
     $cards = array();
 
@@ -126,4 +132,93 @@ function getUsersGameId()
     $connection->close();
 
     return $game_id;
+}
+
+function canBet()
+{
+    $token = apache_request_headers()['TOKEN'];
+
+    if (!$token) {
+        http_response_code(400);
+        exit();
+    }
+
+    $answer = array();
+
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+
+    $question = $connection->prepare("SELECT * FROM players WHERE token = ? AND player_status = 'betting'");
+    $question->bind_param("s", $token);
+    $question->execute();
+
+    $answer['answer'] = $question->get_result()->num_rows !== 0;
+
+    $connection->close();
+
+    print json_encode($answer, JSON_PRETTY_PRINT);
+
+    return $answer;
+}
+
+function user(){
+    $token = apache_request_headers()['TOKEN'];
+
+    if (!$token) {
+        http_response_code(400);
+        exit();
+    }
+
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+
+    $selectUser = $connection->prepare("SELECT p.user_name as username ,points,balance FROM players p INNER JOIN my_users mu on p.user_name = mu.user_name WHERE token = ? ");
+    $selectUser->bind_param("s", $token);
+    $selectUser->execute();
+
+    $user = $selectUser->get_result()->fetch_assoc();
+
+    $connection->close();
+
+    print json_encode($user, JSON_PRETTY_PRINT);
+
+}
+
+function bet($amount){
+    $token = apache_request_headers()['TOKEN'];
+
+    if (!$token) {
+        http_response_code(400);
+        exit();
+    }
+
+    if ($amount <= 0) {
+        exit();
+    }
+
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+
+    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
+
+    $canBet = canBet();
+
+    if (!$canBet['answer'] === true) {
+        http_response_code(401);
+    }
+
+    $checkAmountAfterBet = $connection->prepare("SELECT balance - ? as balanceAfter FROM my_users u INNER JOIN players p on u.user_name = p.user_name WHERE token = ?");
+
+    $checkAmountAfterBet->bind_param("is", $amount, $token);
+    $checkAmountAfterBet->execute();
+
+    if ( $checkAmountAfterBet->get_result()->fetch_assoc()['balanceAfter'] <= 0) {
+        http_response_code(400);
+        exit();
+    }
+
+    $updateBalance = $connection->prepare("UPDATE my_users u INNER JOIN players p ON u.user_name = p.user_name SET balance = balance - ?,player_status = 'done_betting' WHERE token = ? ");
+    $updateBalance->bind_param("is", $amount, $token);
+    $updateBalance->execute();
+
+    $connection->commit();
+
+    $connection->close();
 }
