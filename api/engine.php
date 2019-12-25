@@ -70,7 +70,7 @@ switch ($request[0]) {
 function deleteStalePlayers(){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $mysqli_stmt = $connection->prepare("DELETE FROM players WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 2 AND player_status != 'waiting' ");
+    $mysqli_stmt = $connection->prepare("DELETE FROM players WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 2 AND (player_status = 'hitting' OR player_status = 'betting')");
 
     $mysqli_stmt->execute();
 

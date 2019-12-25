@@ -98,7 +98,7 @@ class Controller {
     }
 
     _needToExit() {
-        return typeof this.game.players.find((player) => player.username === this.game.user.username) === 'undefined';
+        return this.game.user === undefined;
     }
 
     _play() {
@@ -166,6 +166,8 @@ class View {
             this._renderPlayer(player);
         }
 
+        $(`.computer-card`).addClass("bg-dark").addClass("text-white");
+
     }
 
     close() {
@@ -202,6 +204,10 @@ class View {
             </div>`;
 
         $(".players").append(cardDiv);
+
+        if (player.username === this.game.user.username) {
+            $(`.${player.username}-player`).addClass("text-white").addClass(`bg-primary`);
+        }
 
         for (let card of player.cards) {
             $(`.${player.username}-cards`).append(`<img src="${card}" class="img-fluid my_card p-1"/>`);
