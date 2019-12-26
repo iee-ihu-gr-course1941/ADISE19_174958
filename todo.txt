@@ -1,0 +1,7 @@
+1)Add new status value to the game's status -- end status.
+2)Make reset function in php that is triggered when game enters end status and taht : 
+    a)Checks winers/losers and updates their balanaces.
+    b)reset the game by : (1) changing game's status to betting,(2) changing all player's statuses to betting,(3)changing the column value of taken in game_cards table to false for the game.
+3)Make bet_table that contains the bets of the players
+4)Change bet function,so that players that bet zero quit the game automatically.
+
