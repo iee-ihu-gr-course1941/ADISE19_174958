@@ -93,7 +93,28 @@ function createNewGame()
 
     $mysqli_stmt->execute();
 
+    insertCards($mysqli_stmt->insert_id);
+
     $connection -> close();
+
+}
+
+function insertCards($gameID){
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+
+    $selectCards = $connection->prepare("SELECT * FROM cards ");
+    $insertCard = $connection->prepare("INSERT INTO game_cards(card_color, card_value, game_id, taken) VALUES(?,?,?,false)");
+
+    $selectCards->execute();
+
+    $cards = $selectCards->get_result();
+
+    while ($card = $cards->fetch_assoc()) {
+        $insertCard->bind_param("ssi", $card['card_color'], $card['card_value'], $gameID);
+        $insertCard->execute();
+    }
+
+    $connection->close();
 
 }
 

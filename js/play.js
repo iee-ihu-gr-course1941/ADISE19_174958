@@ -98,45 +98,36 @@ class Controller {
     }
 
     _needToExit() {
-        return this.game.user === undefined;
+        return this.game.user === null;
     }
 
     _play() {
-        switch (this.game.status) {
+        switch (this.game.user.status) {
             case "betting":
                 this._tryBetting();
                 break;
-            case "players_turn":
+            case "hitting":
                 this._tryHitting();
                 break;
         }
     }
 
     _tryBetting() {
+        let bet = 0;
+        do {
+            bet = Number(window.prompt("How much do you want to bet?If you press cancel,this will be considered as a bet of zero.", "0"));
+
+            if (isNaN(bet) || bet > this.game.user.balance) {
+                window.prompt("Wrong input.Your input = " + bet + ".Correct inputs' range [" + 0 + "," + this.game.user.balance + "]");
+            }
+
+        } while (isNaN(bet) && bet > this.game.user.balance) ;
+
         $.ajax("api/engine.php/bet", {
-            success: (response) => {
-                let answer = JSON.parse(response);
-
-                if (answer.answer === true) {
-                    let bet = 0;
-                    do {
-                        bet = Number(window.prompt("How much do you want to bet?", "0"));
-
-                        if (isNaN(bet) || bet > this.game.user.balance) {
-                            window.prompt("Wrong input.Your input = " + bet + ".Correct inputs' range [" + 0 + "," + this.game.user.balance + "]");
-                        }
-
-                    } while (isNaN(bet) && bet > this.game.user.balance) ;
-                    $.ajax("api/engine.php/bet", {
-                        type: "POST",
-                        data: {
-                            amount: bet
-                        },
-                        beforeSend: (xhr) => xhr.setRequestHeader("TOKEN", this.token)
-                    });
-                }
+            type: "POST",
+            data: {
+                amount: bet
             },
-            type: "GET",
             beforeSend: (xhr) => xhr.setRequestHeader("TOKEN", this.token)
         });
     }

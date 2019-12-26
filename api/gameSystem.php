@@ -30,7 +30,16 @@ function game()
 
     $response = array();
     $game = getGame($gameId);
-    $response['status'] = $game['status'];
+    switch($game['status']){
+        case "players_turn":
+            $response['status'] = "Player's Turn";
+            break;
+        case "computer_turn":
+            $response["status"] = "Computer's Turn";
+            break;
+        default:
+            $response['status'] = ucfirst($game['status']);
+    }
     $response['players'] = getPlayers($gameId);
     $response['points'] = $game['points'];
     $response['cards'] = getGameCards($gameId);
@@ -55,7 +64,16 @@ function getPlayers($gameId)
         $player = array();
         $cards = array();
         $player['username'] = $row['username'];
-        $player['status'] = $row['status'];
+        switch($row['status']){
+            case "done_betting":
+                $player['status'] = "Done Betting";
+                break;
+            case "done_hitting":
+                $player['status'] = "Done Hitting";
+                break;
+            default:
+                $player["status"] = ucfirst($row["status"]);
+        }
         $player['points'] = $row['points'];
         $player['balance'] = $row['balance'];
         $playerCards->bind_param("s", $player['username']);
@@ -170,7 +188,7 @@ function user(){
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $selectUser = $connection->prepare("SELECT p.user_name as username ,points,balance FROM players p INNER JOIN my_users mu on p.user_name = mu.user_name WHERE token = ? ");
+    $selectUser = $connection->prepare("SELECT p.user_name as username ,points,balance,player_status as status FROM players p INNER JOIN my_users mu on p.user_name = mu.user_name WHERE token = ? ");
     $selectUser->bind_param("s", $token);
     $selectUser->execute();
 
