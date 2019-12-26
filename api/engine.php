@@ -48,9 +48,7 @@ switch ($request[0]) {
         break;
     case "bet":
         $method = $_SERVER['REQUEST_METHOD'];
-        if ($method === 'GET') {
-            canBet();
-        }else if($method === 'POST'){
+        if($method === 'POST'){
             if (!isset($_POST['amount'])) {
                 http_response_code(400);
                 exit();

@@ -83,7 +83,7 @@ class Controller {
         this.token = token;
         this.view = new View(game);
         this.view.render();
-        this._play();
+
     }
 
 
@@ -133,6 +133,19 @@ class Controller {
     }
 
     _tryHitting() {
+        let choice = "none";
+
+        do{
+            choice = window.prompt("It's your turn to play.What do you choose:Hit or Enough?","Enough");
+        }while(choice !== "Hit" && choice !== "Enough");
+
+        let url = "api/engine.php/" + choice.toLocaleLowerCase();
+
+        $.ajax(url,{
+            beforeSend:(xhr)=>{
+                xhr.setRequestHeader("TOKEN", xhr);
+            }
+        })
 
     }
 

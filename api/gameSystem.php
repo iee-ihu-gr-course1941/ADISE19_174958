@@ -152,28 +152,18 @@ function getUsersGameId()
     return $game_id;
 }
 
-function canBet()
+function canBet($amount,$token)
 {
-    $token = apache_request_headers()['TOKEN'];
-
-    if (!$token) {
-        http_response_code(400);
-        exit();
-    }
-
-    $answer = array();
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $question = $connection->prepare("SELECT * FROM players WHERE token = ? AND player_status = 'betting'");
-    $question->bind_param("s", $token);
+    $question = $connection->prepare("SELECT * FROM players p INNER JOIN my_users u ON p.user_name = u.user_name WHERE token = ? AND player_status = 'betting' AND (balance - ?) >= 0");
+    $question->bind_param("si", $token,$amount);
     $question->execute();
 
-    $answer['answer'] = $question->get_result()->num_rows !== 0;
+    $answer= $question->get_result()->num_rows !== 0;
 
     $connection->close();
-
-    print json_encode($answer, JSON_PRETTY_PRINT);
 
     return $answer;
 }
@@ -208,17 +198,18 @@ function bet($amount){
         exit();
     }
 
-    updateLastAction($token);
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
-    $canBet = canBet();
-
-    if (!$canBet['answer'] === true) {
+    if (!canBet($amount)) {
         http_response_code(401);
+        $connection->close();
+        exit();
     }
+
+    updateLastAction($token);
 
     $checkAmountAfterBet = $connection->prepare("SELECT balance - ? as balanceAfter FROM my_users u INNER JOIN players p on u.user_name = p.user_name WHERE token = ?");
 
