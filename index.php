@@ -18,40 +18,13 @@
                 </div>
             </div>
         </div>
-        <div class="row splitter">
+
+        <div class="row splitter d-flex justify-content-center ml-0 mt-2 ">
 
         </div>
+
         <div class="row players card-deck mt-5 players">
-            <div class="card disappear player">
-                <div class="card-header text-center player_name">
-                    Player1
-                </div>
-                <div class="card-body ">
-                    <p class="text-left status">Status:</p>
-                    <p class="text-left money">Money:</p>
-                    <p class="text-left points">Points:</p>
-                </div>
-            </div>
-            <div class="card disappear player">
-                <div class="card-header text-center player_name">
-                    Player1
-                </div>
-                <div class="card-body ">
-                    <p class="text-left status">Status:</p>
-                    <p class="text-left money">Money:</p>
-                    <p class="text-left points">Points:</p>
-                </div>
-            </div>
-            <div class="card disappear player">
-                <div class="card-header text-center player_name">
-                    Player1
-                </div>
-                <div class="card-body ">
-                    <p class="text-left status">Status:</p>
-                    <p class="text-left money">Money:</p>
-                    <p class="text-left points">Points:</p>
-                </div>
-            </div>
+
         </div>
     </div>
 </div>

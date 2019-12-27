@@ -48,7 +48,7 @@ switch ($request[0]) {
         break;
     case "bet":
         $method = $_SERVER['REQUEST_METHOD'];
-        if($method === 'POST'){
+        if ($method === 'POST') {
             if (!isset($_POST['amount'])) {
                 http_response_code(400);
                 exit();
@@ -56,9 +56,15 @@ switch ($request[0]) {
             bet($_POST['amount']);
         }
         break;
+    case "hit":
+        hit();
+        break;
+    case "enough":
+        enough();
+        break;
     default:
         http_response_code(404);
-        exit();
+
 }
 
 /**

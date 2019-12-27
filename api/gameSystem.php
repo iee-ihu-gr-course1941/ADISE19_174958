@@ -26,7 +26,8 @@ function token()
 
 function game()
 {
-    $gameId = getUsersGameId();
+    $token = getToken();
+    $gameId = getUsersGameId($token);
 
     $response = array();
     $game = getGame($gameId);
@@ -58,7 +59,7 @@ function getPlayers($gameId)
     $playersInfo->execute();
     $result = $playersInfo->get_result();
 
-    $playerCards = $connection->prepare("SELECT 'imgs/'||image_name||'.png' AS card FROM player_hands ph INNER JOIN cards_images ci ON ci.card_color = ph.card_color AND ci.card_value = ph.card_value WHERE user_name = ?");
+    $playerCards = $connection->prepare("SELECT CONCAT('imgs/',image_name,'.png' )  AS card FROM player_hands ph INNER JOIN cards_images ci ON ci.card_color = ph.card_color AND ci.card_value = ph.card_value WHERE user_name = ?");
 
     while ($row = $result->fetch_assoc()) {
         $player = array();
@@ -129,14 +130,8 @@ function getGameCards($gameId)
     return $cards;
 }
 
-function getUsersGameId()
+function getUsersGameId($token)
 {
-    $token = apache_request_headers()['TOKEN'];
-
-    if (!$token) {
-        http_response_code(400);
-        exit();
-    }
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
     $mysqli_stmt = $connection->prepare("SELECT game_id FROM players WHERE token = ?");
@@ -169,12 +164,7 @@ function canBet($amount,$token)
 }
 
 function user(){
-    $token = apache_request_headers()['TOKEN'];
-
-    if (!$token) {
-        http_response_code(400);
-        exit();
-    }
+    $token = getToken();
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
@@ -191,19 +181,13 @@ function user(){
 }
 
 function bet($amount){
-    $token = apache_request_headers()['TOKEN'];
-
-    if (!$token) {
-        http_response_code(400);
-        exit();
-    }
-
+    $token = getToken();
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
-    if (!canBet($amount)) {
+    if (!canBet($amount,$token)) {
         http_response_code(401);
         $connection->close();
         exit();
@@ -242,3 +226,99 @@ function updateLastAction($token){
     $connection->close();
 
 }
+
+function enough(){
+    $token = getToken();
+
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+
+    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
+
+    if (!isInHittingStatus($token)) {
+        $connection->close();
+        http_response_code(401);
+        exit();
+    }
+
+    updateLastAction($token);
+
+    $updaterStatus = $connection->prepare("UPDATE players SET player_status = 'done_hitting' WHERE token = ?");
+    $updaterStatus->bind_param("s",$token);
+    $updaterStatus->execute();
+
+    $connection->commit();
+
+    $connection->close();
+
+}
+
+function hit(){
+    $token = getToken();
+
+
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+
+    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
+
+    if (!isInHittingStatus($token)) {
+        http_response_code(401);
+        $connection->close();
+        exit();
+    }
+
+    updateLastAction($token);
+
+    $gameId = getUsersGameId($token);
+
+    $numOfCardsLeft = $connection->prepare("SELECT COUNT(*) as cardsLeft FROM game_cards WHERE game_id = ? AND taken = false");
+    $numOfCardsLeft->bind_param("i",$gameId);
+    $numOfCardsLeft->execute();
+    $cardsLeft = $numOfCardsLeft->get_result()->fetch_assoc()['cardsLeft'];
+
+    $randomCardNum = rand(0, $cardsLeft);
+
+    $randomCard = $connection->prepare("SELECT card_color,card_value FROM game_cards WHERE game_id = ? LIMIT 1 OFFSET ?");
+    $randomCard->bind_param("ii",$gameId,$randomCardNum);
+    $randomCard->execute();
+    $card = $randomCard->get_result()->fetch_assoc();
+
+    $updateCard = $connection->prepare("UPDATE game_cards SET taken = true WHERE game_id = ? AND card_value = ? AND card_color =?");
+    $updateCard->bind_param("iss",$gameId,$card['card_value'],$card['card_color']);
+    $updateCard->execute();
+
+    $insertCard = $connection->prepare("INSERT INTO player_hands(user_name, card_color, card_value) VALUES(?,?,?)");
+    $insertCard->bind_param("sss",$_SESSION["user_name"],$card["card_color"],$card["card_value"]);
+    $insertCard->execute();
+
+    $updatePoints = $connection->prepare("UPDATE players SET points = points + (SELECT cp.points FROM cards_points cp WHERE card_value = ? AND card_color = ?),
+                        player_status = CASE WHEN points > 21 THEN 'overflow' ELSE 'hitting' END WHERE token = ?");
+    $updatePoints->bind_param("sss",$card['card_value'],$card['card_color'],$token);
+    $updatePoints->execute();
+
+    $connection->commit();
+
+    $connection->close();
+
+}
+
+function isInHittingStatus($token){
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+    $check = $connection->prepare("SELECT * FROM players WHERE token = ? AND player_status = 'hitting'");
+    $check->bind_param("s", $token);
+    $check->execute();
+    $mysqli_result = $check->get_result();
+    return $mysqli_result->num_rows !== 0;
+}
+
+function getToken(){
+    $token = apache_request_headers()["TOKEN"];
+
+    if (!$token) {
+        http_response_code(400);
+        exit();
+    }
+
+    return $token;
+}
+
+
