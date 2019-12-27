@@ -4,8 +4,6 @@ require_once "joinSystem.php";
 require_once "gameSystem.php";
 require_once "../database/variables.php";
 
-deleteStalePlayers();//delete players that are in betting or hitting status and haven't played for 2 minutes or more.
-
 updateGames();//update each game's status
 
 session_start();
@@ -40,48 +38,87 @@ switch ($request[0]) {
         isLogin();
         token();
         break;
-    case "game":
-        game();
-        break;
-    case "user":
-        user();
-        break;
-    case "bet":
-        $method = $_SERVER['REQUEST_METHOD'];
-        if ($method === 'POST') {
-            if (!isset($_POST['amount'])) {
-                http_response_code(400);
-                exit();
-            }
-            bet($_POST['amount']);
-        }
-        break;
-    case "hit":
-        hit();
-        break;
-    case "enough":
-        enough();
-        break;
     default:
-        http_response_code(404);
+        $token = getToken();
+        $gameId = getUsersGameId($token);
+        deleteStalePlayers($gameId);//delete players that are in betting or hitting status and haven't played for 2 minutes or more.
 
+        switch ($request[0]){
+            case "game":
+                game();
+                break;
+            case "user":
+                user();
+                break;
+            case "bet":
+                $method = $_SERVER['REQUEST_METHOD'];
+                if ($method === 'POST') {
+                    if (!isset($_POST['amount'])) {
+                        http_response_code(400);
+                        exit();
+                    }
+                    $amount = $_POST['amount'];
+                    if ($amount <= 0) {
+                        removePlayer($token,$gameId);
+                        exit();
+                    }
+                    bet($amount);
+                }
+                break;
+            case "hit":
+                hit();
+                break;
+            case "enough":
+                enough();
+                break;
+            default:
+                http_response_code(404);
+        }
+
+}
+
+function removePlayer($token,$gameId){
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+
+    $mysqli_stmt = $connection->prepare("DELETE FROM players WHERE token = ?");
+
+    $mysqli_stmt->bind_param("s",$token);
+    $mysqli_stmt->execute();
+
+    $connection->close();
+
+    decreasePlayers(1,$gameId);
 }
 
 /**
  * Deletes all players that have been unresponsive for 2 minute or more.
  * If the user that fired the request was one of the players that got deleted,his/her token is deleted from SESSION.
  */
-function deleteStalePlayers(){
+function deleteStalePlayers($gameId){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
     $mysqli_stmt = $connection->prepare("DELETE FROM players WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 2 AND (player_status = 'hitting' OR player_status = 'betting')");
 
     $mysqli_stmt->execute();
 
-    $mysqli_stmt->affected_rows;
+    $affected_rows = $mysqli_stmt->affected_rows;
 
     $connection->close();
 
+    decreasePlayers($affected_rows,$gameId);
+
+}
+
+function decreasePlayers($num,$gameId){
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+
+    $mysqli_stmt = $connection->prepare("UPDATE games SET nums_of_players = nums_of_players - ? WHERE game_id = ?");
+
+    $mysqli_stmt->bind_param("ii",$num,$gameId);
+
+    $mysqli_stmt->execute();
+
+    $connection->close();
 }
 
 function isLogin()
@@ -107,6 +144,10 @@ function updateGames()
     $mysqli_result = $selectGames->get_result();
 
     while ($row = $mysqli_result->fetch_assoc()) {
+        if ($row["nums_of_players"] === 0) {
+            changeStatusTo($row["game_id"],"initialized");
+            return ;
+        }
         if ($row["games_status"] == "initialized") {
             checkInitialized($row["game_id"]);
         } else if ($row["games_status"] == "betting") {

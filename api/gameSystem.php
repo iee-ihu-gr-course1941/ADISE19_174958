@@ -209,6 +209,10 @@ function bet($amount){
     $updateBalance->bind_param("is", $amount, $token);
     $updateBalance->execute();
 
+    $insertBet = $connection->prepare("INSERT INTO bets (token, amount) VALUES(?,?)");
+    $insertBet->bind_param("si",$token,$amount);
+    $insertBet->execute();
+
     $connection->commit();
 
     $connection->close();

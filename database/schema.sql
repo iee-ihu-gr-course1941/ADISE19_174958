@@ -16,6 +16,19 @@
 CREATE DATABASE IF NOT EXISTS `blackjack` /*!40100 DEFAULT CHARACTER SET utf8mb4 */;
 USE `blackjack`;
 
+-- Dumping structure for table blackjack.bets
+CREATE TABLE IF NOT EXISTS `bets` (
+  `token` varchar(34) NOT NULL,
+  `amount` bigint(20) NOT NULL,
+  PRIMARY KEY (`token`,`amount`),
+  CONSTRAINT `fk_bets_players` FOREIGN KEY (`token`) REFERENCES `players` (`token`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `check_amount_positive` CHECK (`amount` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Dumping data for table blackjack.bets: ~1 rows (approximately)
+DELETE FROM `bets`;
+/*!40000 ALTER TABLE `bets` ENABLE KEYS */;
+
 -- Dumping structure for table blackjack.cards
 CREATE TABLE IF NOT EXISTS `cards` (
   `card_color` enum('C','D','H','S') NOT NULL,
@@ -241,9 +254,9 @@ CREATE TABLE IF NOT EXISTS `games` (
   `nums_of_players` tinyint(4) DEFAULT 0,
   PRIMARY KEY (`game_id`),
   CONSTRAINT `games_number_of_players_maximum_3` CHECK (`nums_of_players` <= 3)
-) ENGINE=InnoDB AUTO_INCREMENT=60 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8;
 
--- Dumping data for table blackjack.games: ~0 rows (approximately)
+-- Dumping data for table blackjack.games: ~1 rows (approximately)
 DELETE FROM `games`;
 /*!40000 ALTER TABLE `games` DISABLE KEYS */;
 /*!40000 ALTER TABLE `games` ENABLE KEYS */;
@@ -260,9 +273,9 @@ CREATE TABLE IF NOT EXISTS `game_cards` (
   CONSTRAINT `fk_game_cards_games` FOREIGN KEY (`game_id`) REFERENCES `games` (`game_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Dumping data for table blackjack.game_cards: ~0 rows (approximately)
+-- Dumping data for table blackjack.game_cards: ~52 rows (approximately)
 DELETE FROM `game_cards`;
-/*!40000 ALTER TABLE `game_cards` DISABLE KEYS */;
+
 /*!40000 ALTER TABLE `game_cards` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.my_users
