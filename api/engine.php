@@ -41,9 +41,9 @@ switch ($request[0]) {
     default:
         $token = getToken();
         $gameId = getUsersGameId($token);
-        deleteStalePlayers($gameId);//delete players that are in betting or hitting status and haven't played for 2 minutes or more.
+        markLeftPlayers($gameId);//delete players that are in betting or hitting status and haven't played for 2 minutes or more.
 
-        switch ($request[0]){
+        switch ($request[0]) {
             case "game":
                 game();
                 break;
@@ -59,7 +59,7 @@ switch ($request[0]) {
                     }
                     $amount = $_POST['amount'];
                     if ($amount <= 0) {
-                        removePlayer($token,$gameId);
+                        markPlayerAsLeft($token, $gameId);
                         exit();
                     }
                     bet($amount);
@@ -77,48 +77,51 @@ switch ($request[0]) {
 
 }
 
-function removePlayer($token,$gameId){
+function markPlayerAsLeft($token, $gameId)
+{
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $mysqli_stmt = $connection->prepare("DELETE FROM players WHERE token = ?");
+    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
-    $mysqli_stmt->bind_param("s",$token);
+    $mysqli_stmt = $connection->prepare("UPDATE players SET player_status = 'left_game' WHERE token = ?");
+
+    $mysqli_stmt->bind_param("s", $token);
     $mysqli_stmt->execute();
 
-    $connection->close();
+    decreasePlayers(1, $gameId, $connection);
 
-    decreasePlayers(1,$gameId);
+    $connection->commit();
 }
 
-/**
- * Deletes all players that have been unresponsive for 2 minute or more.
- * If the user that fired the request was one of the players that got deleted,his/her token is deleted from SESSION.
- */
-function deleteStalePlayers($gameId){
+
+function markLeftPlayers($gameId)
+{
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $mysqli_stmt = $connection->prepare("DELETE FROM players WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 2 AND (player_status = 'hitting' OR player_status = 'betting')");
+    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
+
+    $mysqli_stmt = $connection->prepare("UPDATE players SET player_status = 'left_game' WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 2 AND (player_status = 'hitting' OR player_status = 'betting')");
 
     $mysqli_stmt->execute();
 
     $affected_rows = $mysqli_stmt->affected_rows;
 
+    decreasePlayers($affected_rows, $gameId, $connection);
+
+    $connection->commit();
+
     $connection->close();
-
-    decreasePlayers($affected_rows,$gameId);
-
 }
 
-function decreasePlayers($num,$gameId){
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+function decreasePlayers($num, $gameId, $connection)
+{
 
     $mysqli_stmt = $connection->prepare("UPDATE games SET nums_of_players = nums_of_players - ? WHERE game_id = ?");
 
-    $mysqli_stmt->bind_param("ii",$num,$gameId);
+    $mysqli_stmt->bind_param("ii", $num, $gameId);
 
     $mysqli_stmt->execute();
 
-    $connection->close();
 }
 
 function isLogin()
@@ -133,49 +136,24 @@ function updateGames()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
-    $selectGames = $connection->prepare("SELECT * FROM games ");
+    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
-    foreach ($connection->error_list as $error) {
-        print_r($error);
-    }
+    $selectGames = $connection->prepare("SELECT * FROM games ");
 
     $selectGames->execute();
 
     $mysqli_result = $selectGames->get_result();
 
     while ($row = $mysqli_result->fetch_assoc()) {
-        if ($row["nums_of_players"] === 0) {
-            changeStatusTo($row["game_id"],"initialized");
-            return ;
+        if ($row["nums_of_players"] === 0 && $row["games_status"] !== "initialized") {
+            changeStatusTo($row["game_id"], "initialized",$connection);
+        }else if ($row["games_status"] === "initialized" && $row["nums_of_players"] > 0) {
+            checkInitialized($row["game_id"],$connection);
+        } else if ($row["games_status"] === "betting") {
+            checkBetting($row["game_id"],$connection);
+        } else if ($row["games_status"] === "players_turn") {
+            checkPlayersTurn($row["game_id"],$connection);
         }
-        if ($row["games_status"] == "initialized") {
-            checkInitialized($row["game_id"]);
-        } else if ($row["games_status"] == "betting") {
-            checkBetting($row["game_id"]);
-        } else if ($row["games_status"] == "players_turn") {
-            checkPlayersTurn($row["game_id"]);
-        }
-    }
-
-    $connection->close();
-}
-
-function checkInitialized($game_id)
-{
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
-
-    $connection->begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
-
-    $mysqli_stmt = $connection->prepare("SELECT nums_of_players FROM games WHERE game_id = ? ");
-
-    $mysqli_stmt->bind_param("i", $game_id);
-
-    $mysqli_stmt->execute();
-
-    $result = $mysqli_stmt->get_result();
-
-    if ($result->fetch_assoc()['nums_of_players'] > 0) {
-        changeStatusTo($game_id, "betting");
     }
 
     $connection->commit();
@@ -183,11 +161,42 @@ function checkInitialized($game_id)
     $connection->close();
 }
 
-function checkBetting($game_id)
+function checkInitialized($game_id, $connection)
 {
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+    $selectLeftPlayers = $connection->prepare("SELECT p.user_name as username,amount FROM players p INNER JOIN bets b ON b.token = p.token WHERE p.game_id = ? AND p.player_status = 'left_game'");
+    $selectLeftPlayers->bind_param("i", $game_id);
+    $selectLeftPlayers->execute();
+    $leftPlayers = $selectLeftPlayers->get_result();
 
-    $connection->begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
+    $reduceBalance = $connection->prepare("UPDATE my_users SET balance = balance - ? WHERE user_name = ?");
+
+    while ($row = $leftPlayers->fetch_assoc()) {
+        $reduceBalance->bind_param("is", $row["amount"], $row["username"]);
+        $reduceBalance->execute();
+    }
+
+    $deleteOldBets = $connection ->prepare("DELETE FROM bets b INNER JOIN players p ON p.token = b.token WHERE game_id = ?");
+    $deleteOldBets->bind_param("i",$game_id);
+    $deleteOldBets->execute();
+
+    $markGameCardsAsNotTaken = $connection->prepare("UPDATE game_cards SET taken = false WHERE game_id = ?");
+    $markGameCardsAsNotTaken->bind_param("i",$game_id);
+    $markGameCardsAsNotTaken->execute();
+
+    $deleteLeftPlayers = $connection->prepare("DELETE FROM players WHERe game_id = ? AND player_status ='left_game' ");
+    $deleteLeftPlayers->bind_param("i",$game_id);
+    $deleteLeftPlayers->execute();
+
+    $updatePlayersStatus = $connection->prepare("UPDATE players SET player_status = 'betting' WHERE game_id = ?");
+    $updatePlayersStatus->bind_param("i",$game_id);
+    $updatePlayersStatus->execute();
+
+    changeStatusTo($game_id,'betting');
+
+}
+
+function checkBetting($game_id,$connection)
+{
 
     $mysqli_stmt = $connection->prepare("SELECT player_status FROM players WHERE game_id = ? AND player_status = 'betting' ");
 
@@ -199,19 +208,12 @@ function checkBetting($game_id)
         changeStatusTo($game_id, 'players_turn');
     }
 
-    $connection->commit();
-
-    $connection->close();
 }
 
 
-function checkPlayersTurn($game_id)
+function checkPlayersTurn($game_id,$connection)
 {
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
-
-    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
-
-    $checkIfAllPlayersDone = $connection->prepare("SELECT * FROM players WHERE player_status = 'hitting' || player_status = 'done_betting' AND game_id = ?");
+    $checkIfAllPlayersDone = $connection->prepare("SELECT * FROM players WHERE (player_status = 'hitting' OR player_status = 'done_betting') AND game_id = ?");
     $checkIfAllPlayersDone->bind_param("i", $game_id);
     $checkIfAllPlayersDone->execute();
 
@@ -229,21 +231,15 @@ function checkPlayersTurn($game_id)
         }
     }
 
-    $connection->commit();
-
-    $connection->close();
 }
 
 
-function changeStatusTo($game_id, $status)
+function changeStatusTo($game_id, $status,$connection)
 {
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
-
     $mysqli_stmt = $connection->prepare("UPDATE games SET games_status = ? WHERE game_id = ?");
 
     $mysqli_stmt->bind_param("si", $status, $game_id);
 
     $mysqli_stmt->execute();
 
-    $connection->close();
 }

@@ -12,4 +12,5 @@
 10)Make code that changes game's status to the new end status when the number of players is zero.
 11)Fix checkIfPlayerTurn -- the WHERE clause in the select is invalid.
 12)Make function that is triggered when the game's status is in computer's turn status.That function should take cards and add them to the computer's hand until the computer overflow or gets 17 points.Whe computer overflows or gets 17 points or more the game should enter the end status.
-
+13)Change the on delete cascade of bets table.
+14)Add left status value ot the player's status.

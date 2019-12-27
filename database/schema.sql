@@ -25,8 +25,9 @@ CREATE TABLE IF NOT EXISTS `bets` (
   CONSTRAINT `check_amount_positive` CHECK (`amount` > 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Dumping data for table blackjack.bets: ~1 rows (approximately)
+-- Dumping data for table blackjack.bets: ~0 rows (approximately)
 DELETE FROM `bets`;
+/*!40000 ALTER TABLE `bets` DISABLE KEYS */;
 /*!40000 ALTER TABLE `bets` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.cards
@@ -254,9 +255,9 @@ CREATE TABLE IF NOT EXISTS `games` (
   `nums_of_players` tinyint(4) DEFAULT 0,
   PRIMARY KEY (`game_id`),
   CONSTRAINT `games_number_of_players_maximum_3` CHECK (`nums_of_players` <= 3)
-) ENGINE=InnoDB AUTO_INCREMENT=66 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8;
 
--- Dumping data for table blackjack.games: ~1 rows (approximately)
+-- Dumping data for table blackjack.games: ~0 rows (approximately)
 DELETE FROM `games`;
 /*!40000 ALTER TABLE `games` DISABLE KEYS */;
 /*!40000 ALTER TABLE `games` ENABLE KEYS */;
@@ -273,9 +274,9 @@ CREATE TABLE IF NOT EXISTS `game_cards` (
   CONSTRAINT `fk_game_cards_games` FOREIGN KEY (`game_id`) REFERENCES `games` (`game_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Dumping data for table blackjack.game_cards: ~52 rows (approximately)
+-- Dumping data for table blackjack.game_cards: ~0 rows (approximately)
 DELETE FROM `game_cards`;
-
+/*!40000 ALTER TABLE `game_cards` DISABLE KEYS */;
 /*!40000 ALTER TABLE `game_cards` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.my_users
@@ -298,7 +299,7 @@ CREATE TABLE IF NOT EXISTS `players` (
   `token` varchar(34) NOT NULL,
   `user_name` varchar(30) NOT NULL,
   `last_action` datetime DEFAULT current_timestamp(),
-  `player_status` enum('waiting','hitting','betting','overflow','done_betting','done_hitting') NOT NULL DEFAULT 'waiting',
+  `player_status` enum('waiting','hitting','betting','overflow','done_betting','done_hitting','left_game') NOT NULL DEFAULT 'waiting',
   `points` tinyint(4) DEFAULT 0,
   PRIMARY KEY (`token`,`game_id`,`user_name`),
   UNIQUE KEY `token` (`token`),

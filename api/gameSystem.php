@@ -193,7 +193,7 @@ function bet($amount){
         exit();
     }
 
-    updateLastAction($token);
+    updateLastAction($token,$connection);
 
     $checkAmountAfterBet = $connection->prepare("SELECT balance - ? as balanceAfter FROM my_users u INNER JOIN players p on u.user_name = p.user_name WHERE token = ?");
 
@@ -218,16 +218,12 @@ function bet($amount){
     $connection->close();
 }
 
-function updateLastAction($token){
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
-
+function updateLastAction($token,$connection){
     $mysqli_stmt = $connection->prepare("UPDATE players SET last_action = NOW() WHERE token = ?");
 
     $mysqli_stmt->bind_param("s",$token);
 
     $mysqli_stmt->execute();
-
-    $connection->close();
 
 }
 
@@ -238,13 +234,13 @@ function enough(){
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
-    if (!isInHittingStatus($token)) {
+    if (!isInHittingStatus($token,$connection)) {
         $connection->close();
         http_response_code(401);
         exit();
     }
 
-    updateLastAction($token);
+    updateLastAction($token,$connection);
 
     $updaterStatus = $connection->prepare("UPDATE players SET player_status = 'done_hitting' WHERE token = ?");
     $updaterStatus->bind_param("s",$token);
@@ -259,36 +255,21 @@ function enough(){
 function hit(){
     $token = getToken();
 
-
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
-    if (!isInHittingStatus($token)) {
+    if (!isInHittingStatus($token,$connection)) {
         http_response_code(401);
         $connection->close();
         exit();
     }
 
-    updateLastAction($token);
+    updateLastAction($token,$connection);
 
     $gameId = getUsersGameId($token);
 
-    $numOfCardsLeft = $connection->prepare("SELECT COUNT(*) as cardsLeft FROM game_cards WHERE game_id = ? AND taken = false");
-    $numOfCardsLeft->bind_param("i",$gameId);
-    $numOfCardsLeft->execute();
-    $cardsLeft = $numOfCardsLeft->get_result()->fetch_assoc()['cardsLeft'];
-
-    $randomCardNum = rand(0, $cardsLeft);
-
-    $randomCard = $connection->prepare("SELECT card_color,card_value FROM game_cards WHERE game_id = ? LIMIT 1 OFFSET ?");
-    $randomCard->bind_param("ii",$gameId,$randomCardNum);
-    $randomCard->execute();
-    $card = $randomCard->get_result()->fetch_assoc();
-
-    $updateCard = $connection->prepare("UPDATE game_cards SET taken = true WHERE game_id = ? AND card_value = ? AND card_color =?");
-    $updateCard->bind_param("iss",$gameId,$card['card_value'],$card['card_color']);
-    $updateCard->execute();
+    $card = getCard($gameId, $connection);
 
     $insertCard = $connection->prepare("INSERT INTO player_hands(token, card_color, card_value) VALUES(?,?,?)");
     $insertCard->bind_param("sss",$token,$card["card_color"],$card["card_value"]);
@@ -305,12 +286,13 @@ function hit(){
 
 }
 
-function isInHittingStatus($token){
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+function isInHittingStatus($token,$connection){
+
     $check = $connection->prepare("SELECT * FROM players WHERE token = ? AND player_status = 'hitting'");
     $check->bind_param("s", $token);
     $check->execute();
     $mysqli_result = $check->get_result();
+
     return $mysqli_result->num_rows !== 0;
 }
 
@@ -325,4 +307,22 @@ function getToken(){
     return $token;
 }
 
+function getCard($gameId,$connection){
+    $numOfCardsLeft = $connection->prepare("SELECT COUNT(*) as cardsLeft FROM game_cards WHERE game_id = ? AND taken = false");
+    $numOfCardsLeft->bind_param("i",$gameId);
+    $numOfCardsLeft->execute();
+    $cardsLeft = $numOfCardsLeft->get_result()->fetch_assoc()['cardsLeft'];
 
+    $randomCardNum = rand(0, $cardsLeft);
+
+    $randomCard = $connection->prepare("SELECT card_color,card_value FROM game_cards WHERE game_id = ? LIMIT 1 OFFSET ?");
+    $randomCard->bind_param("ii",$gameId,$randomCardNum);
+    $randomCard->execute();
+    $card = $randomCard->get_result()->fetch_assoc();
+
+    $updateCard = $connection->prepare("UPDATE game_cards SET taken = true WHERE game_id = ? AND card_value = ? AND card_color =?");
+    $updateCard->bind_param("iss",$gameId,$card['card_value'],$card['card_color']);
+    $updateCard->execute();
+
+    return $card;
+}
