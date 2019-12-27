@@ -236,7 +236,7 @@ DELETE FROM `computer_hands`;
 -- Dumping structure for table blackjack.games
 CREATE TABLE IF NOT EXISTS `games` (
   `game_id` int(11) NOT NULL AUTO_INCREMENT,
-  `games_status` enum('initialized','betting','players_turn','computer_turn') DEFAULT NULL,
+  `games_status` enum('initialized','betting','players_turn','computer_turn','end_game') DEFAULT NULL,
   `points` tinyint(4) DEFAULT 0,
   `nums_of_players` tinyint(4) DEFAULT 0,
   PRIMARY KEY (`game_id`),
@@ -281,17 +281,18 @@ DELETE FROM `my_users`;
 
 -- Dumping structure for table blackjack.players
 CREATE TABLE IF NOT EXISTS `players` (
-  `user_name` varchar(30) NOT NULL,
   `game_id` int(11) NOT NULL,
-  `token` varchar(1000) NOT NULL,
+  `token` varchar(34) NOT NULL,
+  `user_name` varchar(30) NOT NULL,
   `last_action` datetime DEFAULT current_timestamp(),
   `player_status` enum('waiting','hitting','betting','overflow','done_betting','done_hitting') NOT NULL DEFAULT 'waiting',
   `points` tinyint(4) DEFAULT 0,
-  PRIMARY KEY (`user_name`,`game_id`),
-  UNIQUE KEY `unique_user_name` (`user_name`),
+  PRIMARY KEY (`token`,`game_id`,`user_name`),
+  UNIQUE KEY `token` (`token`),
   KEY `fk_game_id` (`game_id`),
+  KEY `fk_user_name` (`user_name`),
   CONSTRAINT `fk_game_id` FOREIGN KEY (`game_id`) REFERENCES `games` (`game_id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_user_name` FOREIGN KEY (`user_name`) REFERENCES `my_users` (`user_name`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `fk_user_name` FOREIGN KEY (`user_name`) REFERENCES `my_users` (`user_name`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Dumping data for table blackjack.players: ~0 rows (approximately)
@@ -301,13 +302,13 @@ DELETE FROM `players`;
 
 -- Dumping structure for table blackjack.player_hands
 CREATE TABLE IF NOT EXISTS `player_hands` (
-  `user_name` varchar(30) NOT NULL,
+  `token` varchar(34) NOT NULL,
   `card_color` enum('C','D','H','S') NOT NULL,
   `card_value` enum('2','3','4','5','6','7','8','9','10','J','Q','K','A') NOT NULL,
-  PRIMARY KEY (`user_name`,`card_color`,`card_value`),
+  PRIMARY KEY (`token`,`card_color`,`card_value`),
   KEY `fk_cards` (`card_color`,`card_value`),
   CONSTRAINT `fk_cards` FOREIGN KEY (`card_color`, `card_value`) REFERENCES `cards` (`card_color`, `card_value`),
-  CONSTRAINT `fk_player_hands_user_name` FOREIGN KEY (`user_name`) REFERENCES `players` (`user_name`) ON DELETE CASCADE ON UPDATE CASCADE
+  CONSTRAINT `fk_player_hands_token` FOREIGN KEY (`token`) REFERENCES `players` (`token`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- Dumping data for table blackjack.player_hands: ~0 rows (approximately)

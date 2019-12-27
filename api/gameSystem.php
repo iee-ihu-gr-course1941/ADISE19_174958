@@ -54,12 +54,12 @@ function getPlayers($gameId)
 
     $players = array();
 
-    $playersInfo = $connection->prepare("SELECT p.user_name as username,player_status as status,points ,balance FROM players p INNER JOIN my_users u ON p.user_name = u.user_name WHERE game_id = ?");
+    $playersInfo = $connection->prepare("SELECT p.user_name as username,player_status as status,points ,balance,token FROM players p INNER JOIN my_users u ON p.user_name = u.user_name WHERE game_id = ?");
     $playersInfo->bind_param("i", $gameId);
     $playersInfo->execute();
     $result = $playersInfo->get_result();
 
-    $playerCards = $connection->prepare("SELECT CONCAT('imgs/',image_name,'.png' )  AS card FROM player_hands ph INNER JOIN cards_images ci ON ci.card_color = ph.card_color AND ci.card_value = ph.card_value WHERE user_name = ?");
+    $playerCards = $connection->prepare("SELECT CONCAT('imgs/',image_name,'.png' )  AS card FROM player_hands ph INNER JOIN cards_images ci ON ci.card_color = ph.card_color AND ci.card_value = ph.card_value WHERE token = ?");
 
     while ($row = $result->fetch_assoc()) {
         $player = array();
@@ -77,7 +77,7 @@ function getPlayers($gameId)
         }
         $player['points'] = $row['points'];
         $player['balance'] = $row['balance'];
-        $playerCards->bind_param("s", $player['username']);
+        $playerCards->bind_param("s", $row['token']);
         $playerCards->execute();
         $cardsResult = $playerCards->get_result();
 
@@ -286,8 +286,8 @@ function hit(){
     $updateCard->bind_param("iss",$gameId,$card['card_value'],$card['card_color']);
     $updateCard->execute();
 
-    $insertCard = $connection->prepare("INSERT INTO player_hands(user_name, card_color, card_value) VALUES(?,?,?)");
-    $insertCard->bind_param("sss",$_SESSION["user_name"],$card["card_color"],$card["card_value"]);
+    $insertCard = $connection->prepare("INSERT INTO player_hands(token, card_color, card_value) VALUES(?,?,?)");
+    $insertCard->bind_param("sss",$token,$card["card_color"],$card["card_value"]);
     $insertCard->execute();
 
     $updatePoints = $connection->prepare("UPDATE players SET points = points + (SELECT cp.points FROM cards_points cp WHERE card_value = ? AND card_color = ?),
