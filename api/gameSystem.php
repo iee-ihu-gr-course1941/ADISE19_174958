@@ -72,6 +72,8 @@ function getPlayers($gameId)
             case "done_hitting":
                 $player['status'] = "Done Hitting";
                 break;
+            case "left_game":
+                $player['status']= "Left The Game";
             default:
                 $player["status"] = ucfirst($row["status"]);
         }

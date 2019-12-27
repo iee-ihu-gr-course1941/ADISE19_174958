@@ -100,7 +100,7 @@ function markLeftPlayers($gameId)
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
-    $mysqli_stmt = $connection->prepare("UPDATE players SET player_status = 'left_game' WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 2 AND (player_status = 'hitting' OR player_status = 'betting')");
+    $mysqli_stmt = $connection->prepare("UPDATE players SET player_status = 'left_game' WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 1 AND (player_status = 'hitting' OR player_status = 'betting')");
 
     $mysqli_stmt->execute();
 
@@ -144,11 +144,15 @@ function updateGames()
 
     $mysqli_result = $selectGames->get_result();
 
+    $selectPlayingPlayers = $connection->prepare("SELECT COUNT(*) as players_playing FROM players WHERE player_status != 'waiting' AND player_status != 'left_game' AND game_id = ? ");
     while ($row = $mysqli_result->fetch_assoc()) {
-        if ($row["nums_of_players"] === 0 && $row["games_status"] !== "initialized") {
-            changeStatusTo($row["game_id"], "initialized",$connection);
-        }else if ($row["games_status"] === "initialized" && $row["nums_of_players"] > 0) {
-            checkInitialized($row["game_id"],$connection);
+        $selectPlayingPlayers->bind_param("i",$row["game_id"]);
+        $selectPlayingPlayers->execute();
+        $numOfPlayersPlaying = $selectPlayingPlayers->get_result();
+        $numberOfNotWaitingPlayers = $numOfPlayersPlaying ->fetch_assoc()["players_playing"];
+
+        if ($row["games_status"] === "initialized" || $numberOfNotWaitingPlayers == 0) {
+            prepareGame($row["game_id"],$connection);
         } else if ($row["games_status"] === "betting") {
             checkBetting($row["game_id"],$connection);
         } else if ($row["games_status"] === "players_turn") {
@@ -161,37 +165,22 @@ function updateGames()
     $connection->close();
 }
 
-function checkInitialized($game_id, $connection)
+function prepareGame($game_id, $connection)
 {
-    $selectLeftPlayers = $connection->prepare("SELECT p.user_name as username,amount FROM players p INNER JOIN bets b ON b.token = p.token WHERE p.game_id = ? AND p.player_status = 'left_game'");
-    $selectLeftPlayers->bind_param("i", $game_id);
-    $selectLeftPlayers->execute();
-    $leftPlayers = $selectLeftPlayers->get_result();
-
-    $reduceBalance = $connection->prepare("UPDATE my_users SET balance = balance - ? WHERE user_name = ?");
-
-    while ($row = $leftPlayers->fetch_assoc()) {
-        $reduceBalance->bind_param("is", $row["amount"], $row["username"]);
-        $reduceBalance->execute();
-    }
-
-    $deleteOldBets = $connection ->prepare("DELETE FROM bets b INNER JOIN players p ON p.token = b.token WHERE game_id = ?");
-    $deleteOldBets->bind_param("i",$game_id);
-    $deleteOldBets->execute();
-
     $markGameCardsAsNotTaken = $connection->prepare("UPDATE game_cards SET taken = false WHERE game_id = ?");
     $markGameCardsAsNotTaken->bind_param("i",$game_id);
     $markGameCardsAsNotTaken->execute();
 
-    $deleteLeftPlayers = $connection->prepare("DELETE FROM players WHERe game_id = ? AND player_status ='left_game' ");
+    $deleteLeftPlayers = $connection->prepare("DELETE FROM players WHERE game_id = ? AND player_status ='left_game' ");
     $deleteLeftPlayers->bind_param("i",$game_id);
     $deleteLeftPlayers->execute();
 
-    $updatePlayersStatus = $connection->prepare("UPDATE players SET player_status = 'betting' WHERE game_id = ?");
+    changeStatusTo($game_id,'betting',$connection);
+
+    $updatePlayersStatus = $connection->prepare("UPDATE players SET player_status = 'betting',last_action = NOW() WHERE game_id = ?");
     $updatePlayersStatus->bind_param("i",$game_id);
     $updatePlayersStatus->execute();
 
-    changeStatusTo($game_id,'betting');
 
 }
 
@@ -205,7 +194,7 @@ function checkBetting($game_id,$connection)
     $mysqli_stmt->execute();
 
     if ($mysqli_stmt->get_result()->num_rows == 0) {
-        changeStatusTo($game_id, 'players_turn');
+        changeStatusTo($game_id, 'players_turn',$connection);
     }
 
 }
@@ -220,7 +209,7 @@ function checkPlayersTurn($game_id,$connection)
     $result = $checkIfAllPlayersDone->get_result();
 
     if ($result->num_rows == 0) {
-        changeStatusTo($game_id, "computer_turn");
+        changeStatusTo($game_id, "computer_turn",$connection);
     } else {
         $isTherePlayerPlaying = $connection->prepare("SELECT * FROM players WHERE player_status = 'hitting' ");
         $isTherePlayerPlaying->execute();
