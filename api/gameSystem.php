@@ -117,7 +117,7 @@ function getGame($gameId)
 function getGameCards($gameId)
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
-    $computerHand = $connection->prepare("SELECT 'imgs/'||image_name||'.png' as card FROM computer_hands ch INNER JOIN cards_images ci ON ci.card_color = ch.card_color AND ci.card_value = ch.card_value WHERE game_id = ?");
+    $computerHand = $connection->prepare("SELECT CONCAT('imgs/',image_name,'.png') as card FROM computer_hands ch INNER JOIN cards_images ci ON ci.card_color = ch.card_color AND ci.card_value = ch.card_value WHERE game_id = ?");
     $computerHand->bind_param("i", $gameId);
     $computerHand->execute();
 

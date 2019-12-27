@@ -157,6 +157,8 @@ function updateGames()
             checkBetting($row["game_id"],$connection);
         } else if ($row["games_status"] === "players_turn") {
             checkPlayersTurn($row["game_id"],$connection);
+        } else if ($row['games_status'] === "computer_turn") {
+            checkComputerTurn($row["game_id"],$connection);
         }
     }
 
@@ -222,6 +224,27 @@ function checkPlayersTurn($game_id,$connection)
 
 }
 
+function checkComputerTurn($gameId, $connection)
+{
+    $selectComputerPoints = $connection->prepare("SELECT points FROM games WHERE game_id = ? ");
+    $selectComputerPoints->bind_param("i", $gameId);
+    $selectComputerPoints->execute();
+    $result = $selectComputerPoints->get_result();
+    $points = $result->fetch_assoc()['points'];
+
+    if ($points > 17) {
+        changeStatusTo($gameId,"end_game",$connection);
+    }else{
+        $card = getCard($gameId, $connection);
+        $insertCard = $connection->prepare("INSERT INTO computer_hands(game_id, card_color, card_value) VALUES(?,?,?)");
+        $insertCard->bind_param("iss",$gameId,$card['card_color'],$card['card_value']);
+        $insertCard->execute();
+
+        $updatePoints = $connection->prepare("UPDATE games SET points = points + (SELECT cp.points FROM cards_points cp WHERE card_value = ? AND card_color = ?) WHERE game_id = ?");
+        $updatePoints->bind_param("ssi", $card['card_value'], $card['card_color'], $gameId);
+        $updatePoints->execute();
+    }
+}
 
 function changeStatusTo($game_id, $status,$connection)
 {

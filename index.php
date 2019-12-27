@@ -15,6 +15,7 @@
                         <p class="text-left computer-status">Game Status:</p>
                         <p class="text-left computer-points">Computer Points:</p>
                     </div>
+                    <div class="d-flex flex-wrap justify-content-center mt-2 bg-white computer-cards"></div>
                 </div>
             </div>
         </div>

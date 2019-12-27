@@ -280,7 +280,7 @@ class View {
             $(`.${player.username}-points`).html("Points : " + player.points);
 
             let cards = player.cards.filter((card)=>{
-                for(let existingCard of $(".my-card-img") ) {
+                for(let existingCard of $(`.${player.username}-cards .my-card-img`) ) {
                     if ($(existingCard).hasClass(card)) {
                         return false;
                     }
