@@ -1,0 +1,15 @@
+1)Add new status value to the game's status -- end status.
+2)Make reset function in php that is triggered when game enters end status and taht : 
+    a)Checks winers/losers and updates their balanaces.
+    b)reset the game by : (1) changing game's status to betting,(2) changing all player's statuses to betting,(3)changing the column value of taken in game_cards table to false for the game.
+3)Make bet_table that contains the bets of the players
+4)Change bet function,so that players that bet zero quit the game automatically.
+5)Add exceptional situation when Ace is taken as a card by a hit.
+6)Change the db talbe players_hands to have token column instead of user_name.
+7)Delete redundant call to $_SERVER['REQUEST_METHOD']
+8)Add function that reduces the number of players in games table after each call to deleteStalePlayers.
+9)Delete print_r call in engine.php in updateGames function.
+10)Make code that changes game's status to the new end status when the number of players is zero.
+11)Fix checkIfPlayerTurn -- the WHERE clause in the select is invalid.
+12)Make function that is triggered when the game's status is in computer's turn status.That function should take cards and add them to the computer's hand until the computer overflow or gets 17 points.Whe computer overflows or gets 17 points or more the game should enter the end status.
+
