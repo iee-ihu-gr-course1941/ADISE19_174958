@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS `bets` (
   CONSTRAINT `check_amount_positive` CHECK (`amount` > 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Dumping data for table blackjack.bets: ~0 rows (approximately)
+-- Dumping data for table blackjack.bets: ~1 rows (approximately)
 DELETE FROM `bets`;
 /*!40000 ALTER TABLE `bets` DISABLE KEYS */;
 /*!40000 ALTER TABLE `bets` ENABLE KEYS */;
@@ -253,11 +253,12 @@ CREATE TABLE IF NOT EXISTS `games` (
   `games_status` enum('initialized','betting','players_turn','computer_turn','end_game') DEFAULT NULL,
   `points` tinyint(4) DEFAULT 0,
   `nums_of_players` tinyint(4) DEFAULT 0,
+  `initialized` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`game_id`),
   CONSTRAINT `games_number_of_players_maximum_3` CHECK (`nums_of_players` <= 3)
-) ENGINE=InnoDB AUTO_INCREMENT=67 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=105 DEFAULT CHARSET=utf8;
 
--- Dumping data for table blackjack.games: ~0 rows (approximately)
+-- Dumping data for table blackjack.games: ~1 rows (approximately)
 DELETE FROM `games`;
 /*!40000 ALTER TABLE `games` DISABLE KEYS */;
 /*!40000 ALTER TABLE `games` ENABLE KEYS */;
@@ -274,7 +275,7 @@ CREATE TABLE IF NOT EXISTS `game_cards` (
   CONSTRAINT `fk_game_cards_games` FOREIGN KEY (`game_id`) REFERENCES `games` (`game_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Dumping data for table blackjack.game_cards: ~0 rows (approximately)
+-- Dumping data for table blackjack.game_cards: ~52 rows (approximately)
 DELETE FROM `game_cards`;
 /*!40000 ALTER TABLE `game_cards` DISABLE KEYS */;
 /*!40000 ALTER TABLE `game_cards` ENABLE KEYS */;
@@ -288,7 +289,7 @@ CREATE TABLE IF NOT EXISTS `my_users` (
   CONSTRAINT `pass_word_length` CHECK (octet_length(`pass_word`) > 8)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- Dumping data for table blackjack.my_users: ~0 rows (approximately)
+-- Dumping data for table blackjack.my_users: ~2 rows (approximately)
 DELETE FROM `my_users`;
 /*!40000 ALTER TABLE `my_users` DISABLE KEYS */;
 /*!40000 ALTER TABLE `my_users` ENABLE KEYS */;

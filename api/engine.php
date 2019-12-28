@@ -88,8 +88,6 @@ function markPlayerAsLeft($token, $gameId)
     $mysqli_stmt->bind_param("s", $token);
     $mysqli_stmt->execute();
 
-    decreasePlayers(1, $gameId, $connection);
-
     $connection->commit();
 }
 
@@ -103,10 +101,6 @@ function markLeftPlayers($gameId)
     $mysqli_stmt = $connection->prepare("UPDATE players SET player_status = 'left_game' WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 1 AND (player_status = 'hitting' OR player_status = 'betting')");
 
     $mysqli_stmt->execute();
-
-    $affected_rows = $mysqli_stmt->affected_rows;
-
-    decreasePlayers($affected_rows, $gameId, $connection);
 
     $connection->commit();
 
@@ -138,7 +132,7 @@ function updateGames()
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
-    $selectGames = $connection->prepare("SELECT * FROM games ");
+    $selectGames = $connection->prepare("SELECT game_id,games_status,TIMESTAMPDIFF(SECOND,initialized,NOW()) as past_since_initialized FROM games ");
 
     $selectGames->execute();
 
@@ -151,7 +145,7 @@ function updateGames()
         $numOfPlayersPlaying = $selectPlayingPlayers->get_result();
         $numberOfNotWaitingPlayers = $numOfPlayersPlaying ->fetch_assoc()["players_playing"];
 
-        if ($row["games_status"] === "initialized" || $numberOfNotWaitingPlayers == 0) {
+        if ( ($row["games_status"] === "initialized" || $numberOfNotWaitingPlayers == 0) && $row['past_since_initialized'] >= 10 ) {
             prepareGame($row["game_id"],$connection);
         } else if ($row["games_status"] === "betting") {
             checkBetting($row["game_id"],$connection);
@@ -298,9 +292,16 @@ function checkEndGame($gameId, $connection)
 
 function changeStatusTo($game_id, $status,$connection)
 {
-    $mysqli_stmt = $connection->prepare("UPDATE games SET games_status = ? WHERE game_id = ?");
+    $mysqli_stmt = null ;
 
-    $mysqli_stmt->bind_param("si", $status, $game_id);
+    if ($status === "initialized") {
+        $mysqli_stmt = $connection->prepare("UPDATE games SET games_status = ? , initialized = NOW() WHERE game_id = ?");
+        $mysqli_stmt->bind_param("si", $status, $game_id);
+    }else{
+        $mysqli_stmt = $connection->prepare("UPDATE games SET games_status = ? WHERE game_id = ?");
+
+        $mysqli_stmt->bind_param("si", $status, $game_id);
+    }
 
     $mysqli_stmt->execute();
 

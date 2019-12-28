@@ -103,19 +103,19 @@ class Controller {
     }
 
     _play() {
-        if (this.game.user.status === "betting" && this.bettingWindowOn === false) {
+        if (this.game.user.status === "betting" && this.game.status === "Betting" && this.bettingWindowOn === false) {
             this._tryBetting();
         } else if (this.game.user.status === "hitting" && this.hittingWindowOn === false) {
             this._tryHitting()
         }else if (this.game.user.status === "waiting") {
-            this.view.clearPlayerHand(this.game.user.username);
+            this.view.clearPlayersHand();
         } else if (this.game.user.status !== "hitting" && this.game.user.status !== "betting") {
             this.hittingWindowOn = false;
             this.bettingWindowOn = false;
             this.view.hideWindow();
         }
 
-        if (this.game.status === "initialized") {
+        if (this.game.status === "Initialized") {
             this.view.clearComputerHand();
         }
     }
@@ -189,6 +189,11 @@ class View {
     clearComputerHand(){
         $(`.computer-cards`).empty();
     }
+    clearPlayersHand(){
+        for(let player of $(".player") ){
+            $(player).children(".player_hand").empty();
+        }
+    }
 
     hideWindow() {
         $(".splitter").empty();
@@ -237,10 +242,6 @@ class View {
         this.hideWindow();
     }
 
-    clearPlayerHand(username){
-        $(`.${username}-cards`).empty();
-    }
-
     _renderGame() {
         $(".gameView").removeClass(".disappear");
         $(".computer-status").html("Game's Status : " + this.game.status);
@@ -281,7 +282,7 @@ class View {
                     <p class="text-left ${player.username}-points">Points:${player.points}</p>
                 </div>
                 
-                    <div class="d-flex flex-wrap justify-content-center mt-2 bg-white ${player.username}-cards">
+                    <div class="d-flex flex-wrap justify-content-center player_hand mt-2 bg-white ${player.username}-cards">
                     </div>
             </div>`;
 
