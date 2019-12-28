@@ -169,7 +169,7 @@ class View {
         this._renderGame();
 
         for (let card of this.game.cards) {
-            $(".computer-cards").append(`<img src="${card}" class="img-fluid my_card p-1"/>`);
+            $(".computer-cards").append(`<img src="${card}" ${card} class="img-fluid my_card p-1"/>`);
         }
 
         for (let player of this.game.players) {
@@ -231,7 +231,21 @@ class View {
         $(".gameView").removeClass(".disappear");
         $(".computer-status").html("Game's Status : " + this.game.status);
         $(".computer-points").html("Points : " + this.game.points);
-    }
+	let cards = game.cards.filter((card)=>{
+		for(let existingCard of $(`.computer-cards .my-card-img`) ) {
+    	        	if ($(existingCard).hasClass(card)) {
+    	                    return false;
+    	                }
+    	            }
+    	            return true;
+    	
+		});
+	
+	        for (let card of cards) {
+	            $(".computer-cards").append(`<img src="${card}" ${card} class="img-fluid my_card p-1"/>`);
+	        }	    
+	
+	}
 
     _clear() {
         $(".computer-status").empty();
