@@ -107,7 +107,7 @@ class Controller {
             this._tryBetting();
         } else if (this.game.user.status === "hitting" && this.hittingWindowOn === false) {
             this._tryHitting()
-        }else if (this.game.user.status === "waiting") {
+        }else if (this.game.user.status === "waiting" && this.game.status === "Initialized") {
             this.view.clearPlayersHand();
         } else if (this.game.user.status !== "hitting" && this.game.user.status !== "betting") {
             this.hittingWindowOn = false;

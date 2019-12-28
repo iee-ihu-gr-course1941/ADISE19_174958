@@ -281,9 +281,17 @@ function hit(){
     $insertCard->bind_param("sss",$token,$card["card_color"],$card["card_value"]);
     $insertCard->execute();
 
-    $updatePoints = $connection->prepare("UPDATE players SET points = points + (SELECT cp.points FROM cards_points cp WHERE card_value = ? AND card_color = ?),
-                        player_status = CASE WHEN points > 21 THEN 'overflow' WHEN points = 21 THEN 'done_hitting' ELSE 'hitting' END WHERE token = ?");
-    $updatePoints->bind_param("sss",$card['card_value'],$card['card_color'],$token);
+    $selectPlayersPoints = $connection->prepare("SELECT points FROM players WHERE token = ?");
+    $selectPlayersPoints->bind_param("s",$token);
+    $selectPlayersPoints->execute();
+    $playerPointsResult = $selectPlayersPoints->get_result();
+    $playerPoints = $playerPointsResult->fetch_assoc()["points"];
+
+    $points = getPoints($card, $playerPoints, $connection);
+
+    $updatePoints = $connection->prepare("UPDATE players SET points = points + ?,player_status = CASE WHEN points > 21 THEN 'overflow' 
+                        WHEN points = 21 THEN 'done_hitting' ELSE 'hitting' END WHERE token = ?");
+    $updatePoints->bind_param("is",$points,$token);
     $updatePoints->execute();
 
     $connection->commit();
@@ -321,7 +329,7 @@ function getCard($gameId,$connection){
 
     $randomCardNum = rand(0, $cardsLeft);
 
-    $randomCard = $connection->prepare("SELECT card_color,card_value FROM game_cards WHERE game_id = ? LIMIT 1 OFFSET ?");
+    $randomCard = $connection->prepare("SELECT card_color,card_value FROM game_cards WHERE game_id = ? AND taken = false LIMIT 1 OFFSET ?");
     $randomCard->bind_param("ii",$gameId,$randomCardNum);
     $randomCard->execute();
     $card = $randomCard->get_result()->fetch_assoc();
@@ -331,4 +339,19 @@ function getCard($gameId,$connection){
     $updateCard->execute();
 
     return $card;
+}
+
+function getPoints($card, $currentPoints,$connection)
+{
+    $selectPointsOfCard = $connection->prepare("SELECT points FROM cards_points WHERE card_value = ? AND card_color = ?");
+    $selectPointsOfCard->bind_param("ss",$card["card_value"],$card["card_color"]);
+    $selectPointsOfCard->execute();
+    $pointsResult = $selectPointsOfCard->get_result();
+    $points = $pointsResult->fetch_assoc()["points"];
+
+    if ($points === 11 AND $currentPoints > 10) {
+        $points = 1;
+    }
+
+    return $points;
 }

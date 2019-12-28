@@ -251,9 +251,9 @@ function checkComputerTurn($gameId, $connection)
     $selectComputerPoints->bind_param("i", $gameId);
     $selectComputerPoints->execute();
     $result = $selectComputerPoints->get_result();
-    $points = $result->fetch_assoc()['points'];
+    $computerPoints = $result->fetch_assoc()['points'];
 
-    if ($points > 17) {
+    if ($computerPoints >= 17) {
         changeStatusTo($gameId,"end_game",$connection);
     }else{
         $card = getCard($gameId, $connection);
@@ -261,8 +261,10 @@ function checkComputerTurn($gameId, $connection)
         $insertCard->bind_param("iss",$gameId,$card['card_color'],$card['card_value']);
         $insertCard->execute();
 
-        $updatePoints = $connection->prepare("UPDATE games SET points = points + (SELECT cp.points FROM cards_points cp WHERE card_value = ? AND card_color = ?) WHERE game_id = ?");
-        $updatePoints->bind_param("ssi", $card['card_value'], $card['card_color'], $gameId);
+        $points = getPoints($card, $computerPoints, $connection);
+
+        $updatePoints = $connection->prepare("UPDATE games SET points = points + ? WHERE game_id = ?");
+        $updatePoints->bind_param("ii",$points, $gameId);
         $updatePoints->execute();
     }
 }
@@ -274,12 +276,22 @@ function checkEndGame($gameId, $connection)
     $selectWinners->execute();
     $winners = $selectWinners->get_result();
 
-    $updateWinner = $connection->prepare("UPDATE my_users SET balance = balance + ? WHERE user_name = ?");
+    $selectSamePoints = $connection->prepare("SELECT u.user_name as username,amount FROM my_users u INNER JOIN players p ON p.user_name = u.user_name INNER JOIN games g on p.game_id = g.game_id INNER JOIN bets b ON b.token = p.token WHERE p.points <= 21 AND g.points <= 21 AND p.points = g.points  AND g.game_id = ?");
+    $selectSamePoints->bind_param("i",$gameId);
+    $selectSamePoints->execute();
+    $playersWithEqualPoints = $selectSamePoints -> get_result();
+
+    $updateBalance = $connection->prepare("UPDATE my_users SET balance = balance + ? WHERE user_name = ?");
 
     while ($winner = $winners->fetch_assoc()) {
         $amount = ($winner["amount"]*1.5+$winner["amount"]);
-        $updateWinner->bind_param("is",$amount,$winner["username"]);
-        $updateWinner->execute();
+        $updateBalance->bind_param("is",$amount,$winner["username"]);
+        $updateBalance->execute();
+    }
+
+    while ($player = $playersWithEqualPoints->fetch_assoc()) {
+        $updateBalance->bind_param("is",$winner["amount"],$winner["username"]);
+        $updateBalance->execute();
     }
 
     $updateAllPlayersToWaitingStatus  = $connection->prepare("UPDATE players SET player_status = 'waiting' WHERE game_id = ? AND player_status != 'left_game'");
