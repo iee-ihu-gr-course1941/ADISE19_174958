@@ -38,6 +38,9 @@ function game()
         case "computer_turn":
             $response["status"] = "Computer's Turn";
             break;
+        case "end_game":
+            $response["status"] = "End Of Game";
+            break;
         default:
             $response['status'] = ucfirst($game['status']);
     }
@@ -74,6 +77,7 @@ function getPlayers($gameId)
                 break;
             case "left_game":
                 $player['status']= "Left The Game";
+                break;
             default:
                 $player["status"] = ucfirst($row["status"]);
         }
@@ -278,7 +282,7 @@ function hit(){
     $insertCard->execute();
 
     $updatePoints = $connection->prepare("UPDATE players SET points = points + (SELECT cp.points FROM cards_points cp WHERE card_value = ? AND card_color = ?),
-                        player_status = CASE WHEN points > 21 THEN 'overflow' ELSE 'hitting' END WHERE token = ?");
+                        player_status = CASE WHEN points > 21 THEN 'overflow' WHEN points = 21 THEN 'done_hitting' ELSE 'hitting' END WHERE token = ?");
     $updatePoints->bind_param("sss",$card['card_value'],$card['card_color'],$token);
     $updatePoints->execute();
 

@@ -103,14 +103,20 @@ class Controller {
     }
 
     _play() {
-        if(this.game.user.status === "betting" && this.bettingWindowOn === false){
+        if (this.game.user.status === "betting" && this.bettingWindowOn === false) {
             this._tryBetting();
-        }else if (this.game.user.status === "hitting" && this.hittingWindowOn === false) {
+        } else if (this.game.user.status === "hitting" && this.hittingWindowOn === false) {
             this._tryHitting()
-        }else if(this.game.user.status !== "hitting" && this.game.user.status !== "betting"){
+        }else if (this.game.user.status === "waiting") {
+            this.view.clearPlayerHand(this.game.user.username);
+        } else if (this.game.user.status !== "hitting" && this.game.user.status !== "betting") {
             this.hittingWindowOn = false;
             this.bettingWindowOn = false;
             this.view.hideWindow();
+        }
+
+        if (this.game.status === "initialized") {
+            this.view.clearComputerHand();
         }
     }
 
@@ -121,7 +127,7 @@ class Controller {
 
     bet(bet) {
         if (bet < 0 || bet > this.game.user.balance) {
-            window.alert("Wrong bet amount.Valid bets : [0,"+this.game.user.balance+"].");
+            window.alert("Wrong bet amount.Valid bets : [0," + this.game.user.balance + "].");
             return;
         }
         $.ajax("api/engine.php/bet", {
@@ -180,7 +186,11 @@ class View {
 
     }
 
-    hideWindow(){
+    clearComputerHand(){
+        $(`.computer-cards`).empty();
+    }
+
+    hideWindow() {
         $(".splitter").empty();
     }
 
@@ -195,13 +205,13 @@ class View {
                     <button class="btn btn-primary w-100 text-white bet_btn">Bet</button>
                 </div>`
         );
-        $(".bet_btn").click(()=>{
+        $(".bet_btn").click(() => {
             let bet = $("#betInput").val();
             this.controller.bet(bet);
         });
     }
 
-    showHittingWindow(){
+    showHittingWindow() {
         this.hideWindow();
         $(".splitter").append(
             `    <select id="inputSelect" class="form-control">
@@ -212,11 +222,11 @@ class View {
                     <button class="btn btn-primary w-100 text-white confirm_btn">Confirm</button>
                 </div>`
         );
-        $(".confirm_btn").click(()=>{
+        $(".confirm_btn").click(() => {
             let choice = $("#inputSelect").val();
             if (choice === "hit") {
                 this.controller.hit();
-            }else if (choice === "enough") {
+            } else if (choice === "enough") {
                 this.controller.enough();
             }
         });
@@ -227,25 +237,30 @@ class View {
         this.hideWindow();
     }
 
+    clearPlayerHand(username){
+        $(`.${username}-cards`).empty();
+    }
+
     _renderGame() {
         $(".gameView").removeClass(".disappear");
         $(".computer-status").html("Game's Status : " + this.game.status);
         $(".computer-points").html("Points : " + this.game.points);
-	let cards = game.cards.filter((card)=>{
-		for(let existingCard of $(`.computer-cards .my-card-img`) ) {
-    	        	if ($(existingCard).hasClass(card)) {
-    	                    return false;
-    	                }
-    	            }
-    	            return true;
-    	
-		});
-	
-	        for (let card of cards) {
-	            $(".computer-cards").append(`<img src="${card}" ${card} class="img-fluid my_card p-1"/>`);
-	        }	    
-	
-	}
+
+        let cards = this.game.cards.filter((card) => {
+            for (let existingCard of $(`.computer-cards`).children(".my_card")) {
+                if ($(existingCard).hasClass(card)) {
+                    return false;
+                }
+            }
+            return true;
+
+        });
+
+        for (let card of cards) {
+            $(".computer-cards").append(`<img src="${card}" class="img-fluid my_card p-1 ${card}"/>`);
+        }
+
+    }
 
     _clear() {
         $(".computer-status").empty();
@@ -277,7 +292,7 @@ class View {
         }
 
         for (let card of player.cards) {
-            $(`.${player.username}-cards`).append(`<img src="${card}" class="img-fluid my_card p-1  ${card} my-card-img""/>`);
+            $(`.${player.username}-cards`).append(`<img src="${card}" class="img-fluid my_card p-1  ${card} my_card""/>`);
         }
     }
 
@@ -293,8 +308,8 @@ class View {
             $(`.${player.username}-money`).html("Money : " + player.balance);
             $(`.${player.username}-points`).html("Points : " + player.points);
 
-            let cards = player.cards.filter((card)=>{
-                for(let existingCard of $(`.${player.username}-cards .my-card-img`) ) {
+            let cards = player.cards.filter((card) => {
+                for (let existingCard of $(`.${player.username}-cards`).children(".my_card")) {
                     if ($(existingCard).hasClass(card)) {
                         return false;
                     }
@@ -302,7 +317,7 @@ class View {
                 return true;
             });
             for (let card of cards) {
-                $(`.${player.username}-cards`).append(`<img src="${card}" class="img-fluid my_card p-1 ${card} my-card-img"/>`);
+                $(`.${player.username}-cards`).append(`<img src="${card}" class="img-fluid my_card p-1 ${card} my-card"/>`);
             }
 
         }

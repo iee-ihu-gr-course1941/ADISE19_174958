@@ -159,6 +159,8 @@ function updateGames()
             checkPlayersTurn($row["game_id"],$connection);
         } else if ($row['games_status'] === "computer_turn") {
             checkComputerTurn($row["game_id"],$connection);
+        } else if ($row["games_status"] === "end_game") {
+            checkEndGame($row["game_id"],$connection);
         }
     }
 
@@ -176,10 +178,35 @@ function prepareGame($game_id, $connection)
     $deleteLeftPlayers = $connection->prepare("DELETE FROM players WHERE game_id = ? AND player_status ='left_game' ");
     $deleteLeftPlayers->bind_param("i",$game_id);
     $deleteLeftPlayers->execute();
+    decreasePlayers($deleteLeftPlayers->affected_rows,$game_id,$connection);
+
+    $deleteComputersCards = $connection->prepare("DELETE FROM computer_hands WHERE game_id = ? ");
+    $deleteComputersCards->bind_param("i",$game_id);
+    $deleteComputersCards->execute();
+
+    $selectRemainingTokens = $connection->prepare("SELECT token FROM players WHERE game_id = ? ");
+    $selectRemainingTokens->bind_param("i",$game_id);
+    $selectRemainingTokens->execute();
+    $resultTokens = $selectRemainingTokens->get_result();
+
+    $deletePlayersCards = $connection->prepare("DELETE FROM player_hands WHERE token = ? ");
+    $deletePlayersBets = $connection->prepare("DELETE FROM bets WHERE token = ?");
+
+    while ($token = $resultTokens->fetch_assoc()) {
+        $deletePlayersBets->bind_param("s",$token["token"]);
+        $deletePlayersBets->execute();
+
+        $deletePlayersCards->bind_param("s", $token["token"]);
+        $deletePlayersCards->execute();
+    }
+
+    $updateGamePoints = $connection->prepare("UPDATE games SET points = 0 WHERE game_id = ?");
+    $updateGamePoints->bind_param("i",$game_id);
+    $updateGamePoints->execute();
 
     changeStatusTo($game_id,'betting',$connection);
 
-    $updatePlayersStatus = $connection->prepare("UPDATE players SET player_status = 'betting',last_action = NOW() WHERE game_id = ?");
+    $updatePlayersStatus = $connection->prepare("UPDATE players SET player_status = 'betting',last_action = NOW(),points = 0 WHERE game_id = ?");
     $updatePlayersStatus->bind_param("i",$game_id);
     $updatePlayersStatus->execute();
 
@@ -244,6 +271,29 @@ function checkComputerTurn($gameId, $connection)
         $updatePoints->bind_param("ssi", $card['card_value'], $card['card_color'], $gameId);
         $updatePoints->execute();
     }
+}
+
+function checkEndGame($gameId, $connection)
+{
+    $selectWinners = $connection->prepare("SELECT u.user_name as username,amount FROM my_users u INNER JOIN players p ON p.user_name = u.user_name INNER JOIN games g on p.game_id = g.game_id INNER JOIN bets b ON b.token = p.token WHERE p.points <= 21 AND ((g.points <= 21 AND g.points < p.points) OR g.points > 21)  AND g.game_id = ?");
+    $selectWinners->bind_param("i", $gameId);
+    $selectWinners->execute();
+    $winners = $selectWinners->get_result();
+
+    $updateWinner = $connection->prepare("UPDATE my_users SET balance = balance + ? WHERE user_name = ?");
+
+    while ($winner = $winners->fetch_assoc()) {
+        $amount = ($winner["amount"]*1.5+$winner["amount"]);
+        $updateWinner->bind_param("is",$amount,$winner["username"]);
+        $updateWinner->execute();
+    }
+
+    $updateAllPlayersToWaitingStatus  = $connection->prepare("UPDATE players SET player_status = 'waiting' WHERE game_id = ? AND player_status != 'left_game'");
+    $updateAllPlayersToWaitingStatus->bind_param("i", $gameId);
+    $updateAllPlayersToWaitingStatus->execute();
+
+    changeStatusTo($gameId,"initialized",$connection);
+
 }
 
 function changeStatusTo($game_id, $status,$connection)
