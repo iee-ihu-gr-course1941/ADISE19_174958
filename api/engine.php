@@ -290,7 +290,7 @@ function checkEndGame($gameId, $connection)
     }
 
     while ($player = $playersWithEqualPoints->fetch_assoc()) {
-        $updateBalance->bind_param("is",$winner["amount"],$winner["username"]);
+        $updateBalance->bind_param("is",$player["amount"],$player["username"]);
         $updateBalance->execute();
     }
 
