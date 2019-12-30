@@ -6,10 +6,6 @@ function token()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
-    $connection->autocommit(false);
-
-    $connection -> begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
-
     $selectToken = $connection->prepare("SELECT token FROM players WHERE user_name = ? ");
 
     $selectToken->bind_param("s", $_SESSION["user_name"]);
@@ -19,7 +15,6 @@ function token()
     $mysqli_result = $selectToken->get_result();
 
     if ($mysqli_result->num_rows == 0) {
-        $connection->commit();
         $connection->close();
         http_response_code(404);
         exit();
@@ -27,8 +22,6 @@ function token()
 
 
     print json_encode($mysqli_result->fetch_assoc()['token'], JSON_PRETTY_PRINT);
-
-    $connection->commit();
 
     $connection->close();
 }
@@ -38,11 +31,7 @@ function game()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
-    $connection->autocommit(false);
-
-    $connection->begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
-
-    $token = getToken();
+     $token = getToken();
 
     $gameId = getPlayersGameId($token,$connection);
 
@@ -66,7 +55,6 @@ function game()
     $response['cards'] = getGameCards($gameId,$connection);
     $response['user'] = getPlayer($token, $connection);
 
-    $connection->commit();
     $connection->close();
 
     print json_encode($response, JSON_PRETTY_PRINT);
@@ -172,15 +160,10 @@ function bet($amount){
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
-    $connection->autocommit(false);
-
-    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
-
     $token = getToken();
 
     if (!canBet($amount,$token,$connection)) {
         http_response_code(401);
-        $connection->commit();
         $connection->close();
         exit();
     }
@@ -193,6 +176,7 @@ function bet($amount){
     $checkAmountAfterBet->execute();
 
     if ( $checkAmountAfterBet->get_result()->fetch_assoc()['balanceAfter'] <= 0) {
+        $connection->close();
         http_response_code(400);
         exit();
     }
@@ -205,8 +189,6 @@ function bet($amount){
     $insertBet->bind_param("si",$token,$amount);
     $insertBet->execute();
 
-    $connection->commit();
-
     $connection->close();
 }
 
@@ -215,12 +197,7 @@ function enough(){
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
-    $connection->autocommit(false);
-
-    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
-
     if (!isInHittingStatus($token,$connection)) {
-        $connection->commit();
         $connection->close();
         http_response_code(401);
         exit();
@@ -232,8 +209,6 @@ function enough(){
     $updaterStatus->bind_param("s",$token);
     $updaterStatus->execute();
 
-    $connection->commit();
-
     $connection->close();
 
 }
@@ -243,13 +218,8 @@ function hit(){
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
-    $connection->autocommit(false);
-
-    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
-
     if (!isInHittingStatus($token,$connection)) {
         http_response_code(401);
-        $connection->commit();
         $connection->close();
         exit();
     }
@@ -276,8 +246,6 @@ function hit(){
                         WHEN points = 21 THEN 'done_hitting' ELSE 'hitting' END WHERE token = ?");
     $updatePoints->bind_param("is",$points,$token);
     $updatePoints->execute();
-
-    $connection->commit();
 
     $connection->close();
 

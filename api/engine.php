@@ -78,16 +78,12 @@ function markPlayerAsLeft($token)
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
-    $connection->autocommit(false);
-
-    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
-
     $mysqli_stmt = $connection->prepare("UPDATE players SET player_status = 'left_game' WHERE token = ?");
 
     $mysqli_stmt->bind_param("s", $token);
     $mysqli_stmt->execute();
 
-    $connection->commit();
+    $connection->close();
 }
 
 
@@ -95,15 +91,9 @@ function markLeftPlayers()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
-    $connection->autocommit(false);
-
-    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
-
     $mysqli_stmt = $connection->prepare("UPDATE players SET player_status = 'left_game' WHERE TIMESTAMPDIFF(MINUTE,last_action,NOW()) >= 1 AND (player_status = 'hitting' OR player_status = 'betting')");
 
     $mysqli_stmt->execute();
-
-    $connection->commit();
 
     $connection->close();
 }
@@ -131,10 +121,6 @@ function updateGames()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
-    $connection->autocommit(false);
-
-    $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
-
     $selectGames = $connection->prepare("SELECT game_id,games_status,TIMESTAMPDIFF(SECOND,initialized,NOW()) as past_since_initialized FROM games ");
 
     $selectGames->execute();
@@ -160,8 +146,6 @@ function updateGames()
             checkEndGame($row["game_id"],$connection);
         }
     }
-
-    $connection->commit();
 
     $connection->close();
 }
