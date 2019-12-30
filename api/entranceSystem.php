@@ -12,6 +12,8 @@ function signIn($user_name,$pass_word){
 
     $connection = mysqli_connect(HOST, USER, PASSWORD,DATABASE,null,SOCKET);
 
+    $connection->autocommit(false);
+
     $mysqli_stmt = $connection->prepare("SELECT * FROM my_users WHERE user_name = ? AND pass_word = ?");
 
     $mysqli_stmt->bind_param("ss", $user_name,$pass_word);
@@ -28,13 +30,17 @@ function signIn($user_name,$pass_word){
         print "Κωδικος ή/και ονομα χρηστη ειναι λαθος.";
     }
 
-    mysqli_close($connection);
+    $connection->commit();
+
+    $connection->close();
 }
 
 function signUp($user_name,$pass_word){
     require_once "../database/variables.php";
 
     $connection = mysqli_connect(HOST, USER, PASSWORD,DATABASE,null,SOCKET);
+
+    $connection->autocommit(false);
 
     if(strlen($pass_word) < 8){
         http_response_code(400);
@@ -56,6 +62,8 @@ function signUp($user_name,$pass_word){
     }
 
     print "signIn.php";
+
+    $connection->commit();
 
     $connection->close();
 }

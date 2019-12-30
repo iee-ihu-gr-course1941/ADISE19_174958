@@ -78,6 +78,8 @@ function markPlayerAsLeft($token)
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
+    $connection->autocommit(false);
+
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
     $mysqli_stmt = $connection->prepare("UPDATE players SET player_status = 'left_game' WHERE token = ?");
@@ -92,6 +94,8 @@ function markPlayerAsLeft($token)
 function markLeftPlayers()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
+
+    $connection->autocommit(false);
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
@@ -126,6 +130,8 @@ function isLogin()
 function updateGames()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
+
+    $connection->autocommit(false);
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 

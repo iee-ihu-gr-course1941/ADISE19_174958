@@ -16,6 +16,8 @@ function findGame(){
 function assignToken(){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
+    $connection->autocommit(false);
+
     $selectToken = $connection->prepare("SELECT token FROM players WHERE user_name = ? ");
 
     $selectToken->bind_param("s", $_SESSION['user_name']);
@@ -28,6 +30,8 @@ function assignToken(){
         create_token();
     }
 
+    $connection->commit();
+
     $connection->close();
 
 }
@@ -35,6 +39,8 @@ function assignToken(){
 
 function create_token(){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
+
+    $connection->autocommit(false);
 
     $insertToken = $connection->prepare("INSERT INTO players(user_name, game_id, token, player_status) VALUES (?,?,MD5(CONCAT(user_name,NOW())),?)");
 
@@ -56,6 +62,8 @@ function create_token(){
 
     $insertToken -> execute();
 
+    $connection->commit();
+
     $connection->close();
 }
 
@@ -63,6 +71,8 @@ function create_token(){
 function getRandomGame()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
+
+    $connection->autocommit(false);
 
     $mysqli_stmt = $connection->prepare("SELECT * FROM games WHERE nums_of_players < 3 LIMIT 1");
 
@@ -80,6 +90,8 @@ function getRandomGame()
         $game = $row;
     }
 
+    $connection->commit();
+
     $connection->close();
 
     return $game;
@@ -88,6 +100,8 @@ function getRandomGame()
 function createNewGame()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
+
+    $connection->autocommit(false);
 
     $mysqli_stmt = $connection->prepare("INSERT INTO games(games_status, points, nums_of_players) VALUES('initialized', 0, 0) ");
 
@@ -102,6 +116,8 @@ function createNewGame()
 function insertCards($gameID){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
+    $connection->autocommit(false);
+
     $selectCards = $connection->prepare("SELECT * FROM cards ");
     $insertCard = $connection->prepare("INSERT INTO game_cards(card_color, card_value, game_id, taken) VALUES(?,?,?,false)");
 
@@ -114,12 +130,16 @@ function insertCards($gameID){
         $insertCard->execute();
     }
 
+    $connection->commit();
+
     $connection->close();
 
 }
 
 function increasePlayers($game_id){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
+
+    $connection->autocommit(false);
 
     $mysqli_stmt = $connection->prepare("UPDATE games SET nums_of_players = nums_of_players + 1 WHERE game_id = ?");
 
@@ -132,6 +152,8 @@ function increasePlayers($game_id){
         http_response_code(500);
         exit();
     }
+
+    $connection->commit();
 
     $connection->close();
 }
