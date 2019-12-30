@@ -234,7 +234,7 @@ function checkPlayersTurn($game_id,$connection)
         $isTherePlayerPlaying->execute();
         $mysqli_result = $isTherePlayerPlaying->get_result();
         if ($mysqli_result->num_rows == 0) {
-            $nextPlayer = $connection->prepare("UPDATE players p set p.player_status = 'hitting' WHERE p.player_status = 'done_betting' AND last_action <= (SELECT MIN(p2.last_action) FROM players p2 WHERE p2.player_status = 'done_betting')");
+            $nextPlayer = $connection->prepare("UPDATE players p set p.player_status = 'hitting',last_action = NOW() WHERE p.player_status = 'done_betting' AND last_action <= (SELECT MIN(p2.last_action) FROM players p2 WHERE p2.player_status = 'done_betting')");
             $nextPlayer->execute();
         }
     }
