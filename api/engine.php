@@ -68,6 +68,7 @@ switch ($request[0]) {
                 enough();
                 break;
             default:
+                print "NOT FOUND";
                 http_response_code(404);
         }
 
@@ -75,7 +76,7 @@ switch ($request[0]) {
 
 function markPlayerAsLeft($token)
 {
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
@@ -90,7 +91,7 @@ function markPlayerAsLeft($token)
 
 function markLeftPlayers()
 {
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
@@ -124,7 +125,7 @@ function isLogin()
 
 function updateGames()
 {
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 

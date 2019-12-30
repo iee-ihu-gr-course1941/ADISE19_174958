@@ -99,7 +99,7 @@ INSERT INTO `cards` (`card_color`, `card_value`) VALUES
 CREATE TABLE IF NOT EXISTS `cards_images` (
   `card_color` enum('C','D','H','S') NOT NULL,
   `card_value` enum('2','3','4','5','6','7','8','9','10','J','Q','K','A') NOT NULL,
-  `image_name` varchar(30) NOT NULL DEFAULT concat(`card_value`,'_',`card_color`),
+  `image_name` varchar(30) NOT NULL DEFAULT CONCAT(`card_value`,'_',`card_color`),
   PRIMARY KEY (`card_color`,`card_value`,`image_name`),
   UNIQUE KEY `unique_cards_images_cards` (`card_color`,`card_value`),
   CONSTRAINT `fk_cards_images_cards` FOREIGN KEY (`card_color`, `card_value`) REFERENCES `cards` (`card_color`, `card_value`)

@@ -10,7 +10,7 @@ function logout(){
 function signIn($user_name,$pass_word){
     require_once "../database/variables.php";
 
-    $connection = mysqli_connect(HOST, USER, PASSWORD,DATABASE);
+    $connection = mysqli_connect(HOST, USER, PASSWORD,DATABASE,null,SOCKET);
 
     $mysqli_stmt = $connection->prepare("SELECT * FROM my_users WHERE user_name = ? AND pass_word = ?");
 
@@ -34,7 +34,7 @@ function signIn($user_name,$pass_word){
 function signUp($user_name,$pass_word){
     require_once "../database/variables.php";
 
-    $connection = mysqli_connect(HOST, USER, PASSWORD,DATABASE);
+    $connection = mysqli_connect(HOST, USER, PASSWORD,DATABASE,null,SOCKET);
 
     if(strlen($pass_word) < 8){
         http_response_code(400);

@@ -4,7 +4,7 @@ require_once "../database/variables.php";
 
 function token()
 {
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
     $connection -> begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
 
@@ -33,7 +33,7 @@ function token()
 
 function game()
 {
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
 
     $token = getToken();
@@ -164,7 +164,7 @@ function getPlayer($token, $connection){
 
 function bet($amount){
 
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
@@ -204,7 +204,7 @@ function bet($amount){
 function enough(){
     $token = getToken();
 
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
@@ -229,7 +229,7 @@ function enough(){
 function hit(){
     $token = getToken();
 
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
+    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_WRITE);
 
