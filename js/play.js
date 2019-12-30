@@ -90,11 +90,15 @@ class Controller {
 
     updateGame(game) {
         this.game = game;
-        this.view.update(this.game);
+
         if (this._needToExit()) {
             this.view.close();
             stopUpdater();
+            return;
         }
+
+        this.view.update(this.game);
+
         this._play();
     }
 
@@ -107,12 +111,10 @@ class Controller {
             this._tryBetting();
         } else if (this.game.user.status === "hitting" && this.hittingWindowOn === false) {
             this._tryHitting()
-        }else if (this.game.user.status === "waiting" && this.game.status === "Initialized") {
-            this.view.clearPlayersHand();
         } else if (this.game.user.status !== "hitting" && this.game.user.status !== "betting") {
             this.hittingWindowOn = false;
             this.bettingWindowOn = false;
-            this.view.hideWindow();
+            this.view.hideWindows();
         }
 
         if (this.game.status === "Initialized") {
@@ -126,10 +128,6 @@ class Controller {
     }
 
     bet(bet) {
-        if (bet < 0 || bet > this.game.user.balance) {
-            window.alert("Wrong bet amount.Valid bets : [0," + this.game.user.balance + "].");
-            return;
-        }
         $.ajax("api/engine.php/bet", {
             type: "POST",
             data: {
@@ -137,6 +135,10 @@ class Controller {
             },
             beforeSend: (xhr) => xhr.setRequestHeader("TOKEN", this.token)
         });
+    }
+
+    canBet(bet){
+        return bet > 0 && bet <= this.game.user.balance;
     }
 
     _tryHitting() {
@@ -186,60 +188,33 @@ class View {
 
     }
 
-    clearComputerHand(){
+    clearComputerHand() {
         $(`.computer-cards`).empty();
-    }
-    clearPlayersHand(){
-        for(let player of $(".player") ){
-            $(player).children(".player_hand").empty();
-        }
-    }
-
-    hideWindow() {
-        $(".splitter").empty();
     }
 
     showBettingWindow() {
-        this.hideWindow();
-        $(".splitter").append(
-            `    <div class="form-group text-center col-12">
-                    <label for="betInput" class="w-100">Amount To Bet:</label>
-                    <input type="number" class="form-control" id="betInput" value="0">
-                </div>
-                <div class="col-12">
-                    <button class="btn btn-primary w-100 text-white bet_btn">Bet</button>
-                </div>`
-        );
-        $(".bet_btn").click(() => {
-            let bet = $("#betInput").val();
-            this.controller.bet(bet);
-        });
+        $(`.hit_btn.${this.controller.game.user.username}`).hide(1000);
+        $(`.enough_btn.${this.controller.game.user.username}`).hide(1000);
+        $(`.bet_btn.${this.controller.game.user.username}`).show(1000);
+        $(`.bet_input.${this.controller.game.user.username}`).show(1000);
     }
 
     showHittingWindow() {
-        this.hideWindow();
-        $(".splitter").append(
-            `    <select id="inputSelect" class="form-control">
-                    <option value="hit">Hit</option>
-                    <option value="enough">Enough</option>
-                </select>
-                <div class="col-12">
-                    <button class="btn btn-primary w-100 text-white confirm_btn">Confirm</button>
-                </div>`
-        );
-        $(".confirm_btn").click(() => {
-            let choice = $("#inputSelect").val();
-            if (choice === "hit") {
-                this.controller.hit();
-            } else if (choice === "enough") {
-                this.controller.enough();
-            }
-        });
+        $(`.bet_btn.${this.controller.game.user.username}`).hide(1000);
+        $(`.bet_input.${this.controller.game.user.username}`).hide(1000);
+        $(`.hit_btn.${this.controller.game.user.username}`).show(1000);
+        $(`.enough_btn.${this.controller.game.user.username}`).show(1000);
+    }
+
+    hideWindows(){
+        $(`.hit_btn.${this.controller.game.user.username}`).hide(1000);
+        $(`.enough_btn.${this.controller.game.user.username}`).hide(1000);
+        $(`.bet_btn.${this.controller.game.user.username}`).hide(1000);
+        $(`.bet_input.${this.controller.game.user.username}`).hide(1000);
     }
 
     close() {
         this._clear();
-        this.hideWindow();
     }
 
     _renderGame() {
@@ -280,10 +255,17 @@ class View {
                     <p class="text-left ${player.username}-status">Status:${player.status}</p>
                     <p class="text-left ${player.username}-money">Money:${player.balance}</p>
                     <p class="text-left ${player.username}-points">Points:${player.points}</p>
-                </div>
-                
-                    <div class="d-flex flex-wrap justify-content-center player_hand mt-2 bg-white ${player.username}-cards">
+                    <div class="d-flex flex-wrap justify-content-center">
+                        <button class="hit_btn ${player.username} btn btn-success">Hit</button>
+                        <button class="enough_btn ${player.username} ml-3 btn btn-danger">Enough</button>
+                    </div>   
+                    <div class="d-flex flex-wrap justify-content-center mt-2">
+                        <input type="number" class="bet_input ${player.username}" placeholder="Put the amount you're willing to bet.">
+                        <button class="bet_btn ${player.username} ml-3 btn btn-dark">Bet</button>
                     </div>
+                </div>
+                <div class="d-flex flex-wrap justify-content-center player_hand mt-2 bg-white ${player.username}-cards">
+                </div>
             </div>`;
 
         $(".players").append(cardDiv);
@@ -295,6 +277,23 @@ class View {
         for (let card of player.cards) {
             $(`.${player.username}-cards`).append(`<img src="${card}" class="img-fluid my_card p-1  ${card} my_card""/>`);
         }
+
+        $(`.bet_btn.${player.username}`).click(() => {
+            let bet = $(`.bet_input.${player.username}`).val();
+            if (this.controller.canBet(bet)) {
+                this.controller.bet(bet);
+            }
+        });
+
+        $(`.hit_btn.${player.username}`).click(()=>{
+            this.controller.hit();
+        });
+
+        $(`.enough_btn.${player.username}`).click(()=>{
+            this.controller.enough();
+        });
+
+        $(`.bet_btn.${player.username},.hit_btn.${player.username},.enough_btn.${player.username},.bet_input.${player.username}`).hide();
     }
 
     update(game) {
@@ -304,7 +303,25 @@ class View {
         this._renderGame();
         this._removeLeftPlayers(oldPlayers);
 
+
+        let newPlayers = this.game.players.filter((player) => {
+            for (let oldPlayer of oldPlayers) {
+                if (oldPlayer.username === player.username) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        for (let player of newPlayers) {
+            this._renderPlayer(player);
+        }
+
+
         for (let player of this.game.players) {
+
+            this._removeOldCards(player);
+
             $(`.${player.username}-status`).html("Status : " + player.status);
             $(`.${player.username}-money`).html("Money : " + player.balance);
             $(`.${player.username}-points`).html("Points : " + player.points);
@@ -323,17 +340,6 @@ class View {
 
         }
 
-        this.game.players.filter((player) => {
-            for (let oldPlayer of oldPlayers) {
-                if (oldPlayer.username === player.username) {
-                    return false;
-                }
-            }
-            return true;
-        }).forEach((player) => {
-            this._renderPlayer(player);
-        })
-
     }
 
     _removeLeftPlayers(oldPlayers) {
@@ -347,5 +353,39 @@ class View {
         }).forEach((leftPlayer) => {
             $(`.${leftPlayer.username}-player`).remove();
         });
+    }
+
+    _removeOldCards(player){
+        let currentCards = this._getPlayersCards(player.username);
+        let oldCards = currentCards.filter((card)=>{
+            for (let newCard of player.cards) {
+                if (newCard === card) {
+                    return false;
+                }
+            }
+            return true;
+        });
+        oldCards.forEach(card =>{
+            let removedImage = document.getElementsByClassName(`${player.username}-cards`)[0].getElementsByClassName(`${card}`)[0];
+            removedImage.parentNode.removeChild(removedImage);
+        } );
+    }
+
+    _getPlayersCards(username){
+        let cards = new Array();
+
+        let imgs = document.getElementsByClassName(`${username}-cards`)[0].children;
+
+        for (let img of imgs) {
+            let classes = img.className.split(" ");
+
+            cards.push( classes.filter((clazz)=> {
+                return clazz.match(/imgs\/.*\.png/);
+            }).shift() );
+
+        }
+
+        return cards;
+
     }
 }

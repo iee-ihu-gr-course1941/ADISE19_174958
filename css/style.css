@@ -14,3 +14,11 @@
 .my_card{
     height: 150px;
 }
+
+.hit_btn,.enough_btn,.bet_btn{
+    width:150px;
+}
+
+.bet_input{
+    min-width: 300px;
+}

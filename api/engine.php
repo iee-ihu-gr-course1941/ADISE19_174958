@@ -40,8 +40,7 @@ switch ($request[0]) {
         break;
     default:
         $token = getToken();
-        $gameId = getUsersGameId($token);
-        markLeftPlayers($gameId);//delete players that are in betting or hitting status and haven't played for 2 minutes or more.
+        markLeftPlayers();//delete players that are in betting or hitting status and haven't played for 2 minutes or more.
 
         switch ($request[0]) {
             case "game":
@@ -59,7 +58,7 @@ switch ($request[0]) {
                     }
                     $amount = $_POST['amount'];
                     if ($amount <= 0) {
-                        markPlayerAsLeft($token, $gameId);
+                        markPlayerAsLeft($token);
                         exit();
                     }
                     bet($amount);
@@ -77,7 +76,7 @@ switch ($request[0]) {
 
 }
 
-function markPlayerAsLeft($token, $gameId)
+function markPlayerAsLeft($token)
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
@@ -92,7 +91,7 @@ function markPlayerAsLeft($token, $gameId)
 }
 
 
-function markLeftPlayers($gameId)
+function markLeftPlayers()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
 
