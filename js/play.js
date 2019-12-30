@@ -16,18 +16,14 @@ function join(response, status, xhr) {
 }
 
 function assignToken(response, status, xhr) {
-    let returnedToken = JSON.parse(response);
-    let token = returnedToken.token;
-    let username = returnedToken.user_name;
+    let token = JSON.parse(response);
     let game = getGame(token);
-    game.user = getUser(token);
     let controller = new Controller(token, game);
     updater = setInterval(function () {
         $.ajax("api/engine.php/game",
             {
                 success: (response) => {
                     let game = JSON.parse(response);
-                    game.user = getUser(token);
                     controller.updateGame(game);
                 },
                 type: "GET",
@@ -55,20 +51,6 @@ function getGame(token) {
     return game;
 }
 
-function getUser(token) {
-    let user = null;
-    $.ajax("api/engine.php/user", {
-        type: "GET",
-        beforeSend: function (xhr) {
-            xhr.setRequestHeader("TOKEN", token)
-        },
-        async: false,
-        success: function (response, status, xhr) {
-            user = JSON.parse(response);
-        }
-    });
-    return user;
-}
 
 function stopUpdater() {
     if (updater != null) {
@@ -111,15 +93,12 @@ class Controller {
             this._tryBetting();
         } else if (this.game.user.status === "hitting" && this.hittingWindowOn === false) {
             this._tryHitting()
-        } else if (this.game.user.status !== "hitting" && this.game.user.status !== "betting") {
+        } else if (this.game.user.status !== "hitting" && this.game.user.status !== "betting" && ( this.hittingWindowOn === true || this.bettingWindowOn === true )) {
             this.hittingWindowOn = false;
             this.bettingWindowOn = false;
             this.view.hideWindows();
         }
 
-        if (this.game.status === "Initialized") {
-            this.view.clearComputerHand();
-        }
     }
 
     _tryBetting() {
@@ -188,10 +167,6 @@ class View {
 
     }
 
-    clearComputerHand() {
-        $(`.computer-cards`).empty();
-    }
-
     showBettingWindow() {
         $(`.hit_btn.${this.controller.game.user.username}`).hide(1000);
         $(`.enough_btn.${this.controller.game.user.username}`).hide(1000);
@@ -218,6 +193,8 @@ class View {
     }
 
     _renderGame() {
+        this._removeOldCardsOfComputer();
+
         $(".gameView").removeClass(".disappear");
         $(".computer-status").html("Game's Status : " + this.game.status);
         $(".computer-points").html("Points : " + this.game.points);
@@ -303,7 +280,6 @@ class View {
         this._renderGame();
         this._removeLeftPlayers(oldPlayers);
 
-
         let newPlayers = this.game.players.filter((player) => {
             for (let oldPlayer of oldPlayers) {
                 if (oldPlayer.username === player.username) {
@@ -320,7 +296,7 @@ class View {
 
         for (let player of this.game.players) {
 
-            this._removeOldCards(player);
+            this._removeOldCardsOfPlayer(player);
 
             $(`.${player.username}-status`).html("Status : " + player.status);
             $(`.${player.username}-money`).html("Money : " + player.balance);
@@ -355,8 +331,8 @@ class View {
         });
     }
 
-    _removeOldCards(player){
-        let currentCards = this._getPlayersCards(player.username);
+    _removeOldCardsOfPlayer(player){
+        let currentCards = this._getCards(player.username);
         let oldCards = currentCards.filter((card)=>{
             for (let newCard of player.cards) {
                 if (newCard === card) {
@@ -371,12 +347,30 @@ class View {
         } );
     }
 
-    _getPlayersCards(username){
+    _removeOldCardsOfComputer(){
+        let currentCards = this._getCards("computer");
+
+        let oldCards = currentCards.filter((card)=>{
+            for (let newCard of this.controller.game.cards) {
+                if (newCard === card) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        oldCards.forEach(card =>{
+            let removedImage = document.getElementsByClassName(`computer-cards`)[0].getElementsByClassName(`${card}`)[0];
+            removedImage.parentNode.removeChild(removedImage);
+        } );
+    }
+
+    _getCards(cssClazz){
         let cards = new Array();
 
-        let imgs = document.getElementsByClassName(`${username}-cards`)[0].children;
+        let images = document.getElementsByClassName(`${cssClazz}-cards`)[0].children;
 
-        for (let img of imgs) {
+        for (let img of images) {
             let classes = img.className.split(" ");
 
             cards.push( classes.filter((clazz)=> {

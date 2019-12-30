@@ -46,9 +46,6 @@ switch ($request[0]) {
             case "game":
                 game();
                 break;
-            case "user":
-                user();
-                break;
             case "bet":
                 $method = $_SERVER['REQUEST_METHOD'];
                 if ($method === 'POST') {

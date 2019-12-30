@@ -8,9 +8,22 @@ function token()
 
     $connection -> begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
 
-    $token = tokenWithConnection($connection);
+    $selectToken = $connection->prepare("SELECT token FROM players WHERE user_name = ? ");
 
-    print json_encode($token, JSON_PRETTY_PRINT);
+    $selectToken->bind_param("s", $_SESSION["user_name"]);
+
+    $selectToken->execute();
+
+    $mysqli_result = $selectToken->get_result();
+
+    if ($mysqli_result->num_rows == 0) {
+        $connection->commit();
+        http_response_code(404);
+        exit();
+    }
+
+
+    print json_encode($mysqli_result->fetch_assoc()['token'], JSON_PRETTY_PRINT);
 
     $connection->commit();
 
@@ -23,8 +36,9 @@ function game()
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
     $connection->begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
 
-    $tokenAndUsername = tokenWithConnection($connection);
-    $gameId = getUsersGameId($tokenAndUsername['token'],$connection);
+    $token = getToken();
+
+    $gameId = getPlayersGameId($token,$connection);
 
     $response = array();
     $game = getGame($gameId,$connection);
@@ -44,6 +58,7 @@ function game()
     $response['players'] = getPlayers($gameId,$connection);
     $response['points'] = $game['points'];
     $response['cards'] = getGameCards($gameId,$connection);
+    $response['user'] = getPlayer($token, $connection);
 
     $connection->commit();
     $connection->close();
@@ -54,7 +69,6 @@ function game()
 
 function getPlayers($gameId,$connection)
 {
-
     $players = array();
 
     $playersInfo = $connection->prepare("SELECT p.user_name as username,player_status as status,points ,balance,token FROM players p INNER JOIN my_users u ON p.user_name = u.user_name WHERE game_id = ?");
@@ -113,7 +127,7 @@ function getGame($gameId,$connection)
 
 function getGameCards($gameId,$connection)
 {
-     $computerHand = $connection->prepare("SELECT CONCAT('imgs/',image_name,'.png') as card FROM computer_hands ch INNER JOIN cards_images ci ON ci.card_color = ch.card_color AND ci.card_value = ch.card_value WHERE game_id = ?");
+    $computerHand = $connection->prepare("SELECT CONCAT('imgs/',image_name,'.png') as card FROM computer_hands ch INNER JOIN cards_images ci ON ci.card_color = ch.card_color AND ci.card_value = ch.card_value WHERE game_id = ?");
     $computerHand->bind_param("i", $gameId);
     $computerHand->execute();
 
@@ -129,58 +143,23 @@ function getGameCards($gameId,$connection)
 }
 
 
-function getUsersGameId($token,$connection)
+function getPlayersGameId($token, $connection)
 {
-
     $mysqli_stmt = $connection->prepare("SELECT game_id FROM players WHERE token = ?");
 
     $mysqli_stmt->bind_param("s", $token);
 
     $mysqli_stmt->execute();
 
-    $game_id = $mysqli_stmt->get_result()->fetch_assoc()['game_id'];
-
-    return $game_id;
+    return $mysqli_stmt->get_result()->fetch_assoc()['game_id'];
 }
 
-function tokenWithConnection($connection)
-{
-
-    $selectToken = $connection->prepare("SELECT token,user_name FROM players WHERE user_name = ? ");
-
-    $selectToken->bind_param("s", $_SESSION["user_name"]);
-
-    $selectToken->execute();
-
-    $mysqli_result = $selectToken->get_result();
-
-    if ($mysqli_result->num_rows == 0) {
-        $connection->commit();
-        http_response_code(404);
-        exit();
-    }
-
-    return $mysqli_result->fetch_assoc();
-
-}
-
-function user(){
-    $token = getToken();
-
-    $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE);
-    $connection->begin_transaction(MYSQLI_TRANS_START_READ_ONLY);
-
-    $selectUser = $connection->prepare("SELECT p.user_name as username ,points,balance,player_status as status FROM players p INNER JOIN my_users mu on p.user_name = mu.user_name WHERE token = ? ");
+function getPlayer($token, $connection){
+    $selectUser = $connection->prepare("SELECT p.user_name as username,player_status as status ,balance FROM players p INNER JOIN my_users mu on p.user_name = mu.user_name WHERE token = ? ");
     $selectUser->bind_param("s", $token);
     $selectUser->execute();
 
-    $user = $selectUser->get_result()->fetch_assoc();
-
-    $connection->commit();
-    $connection->close();
-
-    print json_encode($user, JSON_PRETTY_PRINT);
-
+    return $selectUser->get_result()->fetch_assoc();
 }
 
 function bet($amount){
@@ -262,7 +241,7 @@ function hit(){
 
     updateLastAction($token,$connection);
 
-    $gameId = getUsersGameId($token,$connection);
+    $gameId = getPlayersGameId($token,$connection);
 
     $card = getCard($gameId, $connection);
 
