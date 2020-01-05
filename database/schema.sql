@@ -17,6 +17,7 @@ CREATE DATABASE IF NOT EXISTS `blackjack` /*!40100 DEFAULT CHARACTER SET utf8mb4
 USE `blackjack`;
 
 -- Dumping structure for table blackjack.bets
+DROP TABLE IF EXISTS `bets`;
 CREATE TABLE IF NOT EXISTS `bets` (
   `token` varchar(34) NOT NULL,
   `amount` bigint(20) NOT NULL,
@@ -31,6 +32,7 @@ DELETE FROM `bets`;
 /*!40000 ALTER TABLE `bets` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.cards
+DROP TABLE IF EXISTS `cards`;
 CREATE TABLE IF NOT EXISTS `cards` (
   `card_color` enum('C','D','H','S') NOT NULL,
   `card_value` enum('2','3','4','5','6','7','8','9','10','J','Q','K','A') NOT NULL,
@@ -96,10 +98,11 @@ INSERT INTO `cards` (`card_color`, `card_value`) VALUES
 /*!40000 ALTER TABLE `cards` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.cards_images
+DROP TABLE IF EXISTS `cards_images`;
 CREATE TABLE IF NOT EXISTS `cards_images` (
   `card_color` enum('C','D','H','S') NOT NULL,
   `card_value` enum('2','3','4','5','6','7','8','9','10','J','Q','K','A') NOT NULL,
-  `image_name` varchar(30) NOT NULL DEFAULT CONCAT(`card_value`,'_',`card_color`),
+  `image_name` varchar(30) NOT NULL DEFAULT concat(`card_value`,'_',`card_color`),
   PRIMARY KEY (`card_color`,`card_value`,`image_name`),
   UNIQUE KEY `unique_cards_images_cards` (`card_color`,`card_value`),
   CONSTRAINT `fk_cards_images_cards` FOREIGN KEY (`card_color`, `card_value`) REFERENCES `cards` (`card_color`, `card_value`)
@@ -164,6 +167,7 @@ INSERT INTO `cards_images` (`card_color`, `card_value`, `image_name`) VALUES
 /*!40000 ALTER TABLE `cards_images` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.cards_points
+DROP TABLE IF EXISTS `cards_points`;
 CREATE TABLE IF NOT EXISTS `cards_points` (
   `card_color` enum('C','D','H','S') NOT NULL,
   `card_value` enum('2','3','4','5','6','7','8','9','10','J','Q','K','A') NOT NULL,
@@ -232,6 +236,7 @@ INSERT INTO `cards_points` (`card_color`, `card_value`, `points`) VALUES
 /*!40000 ALTER TABLE `cards_points` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.computer_hands
+DROP TABLE IF EXISTS `computer_hands`;
 CREATE TABLE IF NOT EXISTS `computer_hands` (
   `game_id` int(11) NOT NULL,
   `card_color` enum('C','D','H','S') NOT NULL,
@@ -248,6 +253,7 @@ DELETE FROM `computer_hands`;
 /*!40000 ALTER TABLE `computer_hands` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.games
+DROP TABLE IF EXISTS `games`;
 CREATE TABLE IF NOT EXISTS `games` (
   `game_id` int(11) NOT NULL AUTO_INCREMENT,
   `games_status` enum('initialized','betting','players_turn','computer_turn','end_game') DEFAULT NULL,
@@ -256,14 +262,14 @@ CREATE TABLE IF NOT EXISTS `games` (
   `initialized` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`game_id`),
   CONSTRAINT `games_number_of_players_maximum_3` CHECK (`nums_of_players` <= 3)
-) ENGINE=InnoDB AUTO_INCREMENT=114 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=116 DEFAULT CHARSET=utf8;
 
--- Dumping data for table blackjack.games: ~0 rows (approximately)
+-- Dumping data for table blackjack.games: ~2 rows (approximately)
 DELETE FROM `games`;
-/*!40000 ALTER TABLE `games` DISABLE KEYS */;
-/*!40000 ALTER TABLE `games` ENABLE KEYS */;
+
 
 -- Dumping structure for table blackjack.game_cards
+DROP TABLE IF EXISTS `game_cards`;
 CREATE TABLE IF NOT EXISTS `game_cards` (
   `card_color` enum('C','D','H','S') NOT NULL,
   `card_value` enum('2','3','4','5','6','7','8','9','10','J','Q','K','A') NOT NULL,
@@ -275,12 +281,12 @@ CREATE TABLE IF NOT EXISTS `game_cards` (
   CONSTRAINT `fk_game_cards_games` FOREIGN KEY (`game_id`) REFERENCES `games` (`game_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Dumping data for table blackjack.game_cards: ~0 rows (approximately)
+-- Dumping data for table blackjack.game_cards: ~104 rows (approximately)
 DELETE FROM `game_cards`;
-/*!40000 ALTER TABLE `game_cards` DISABLE KEYS */;
-/*!40000 ALTER TABLE `game_cards` ENABLE KEYS */;
+
 
 -- Dumping structure for table blackjack.my_users
+DROP TABLE IF EXISTS `my_users`;
 CREATE TABLE IF NOT EXISTS `my_users` (
   `user_name` varchar(30) NOT NULL,
   `pass_word` varchar(30) NOT NULL,
@@ -291,10 +297,9 @@ CREATE TABLE IF NOT EXISTS `my_users` (
 
 -- Dumping data for table blackjack.my_users: ~0 rows (approximately)
 DELETE FROM `my_users`;
-/*!40000 ALTER TABLE `my_users` DISABLE KEYS */;
-/*!40000 ALTER TABLE `my_users` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.players
+DROP TABLE IF EXISTS `players`;
 CREATE TABLE IF NOT EXISTS `players` (
   `game_id` int(11) NOT NULL,
   `token` varchar(34) NOT NULL,
@@ -316,6 +321,7 @@ DELETE FROM `players`;
 /*!40000 ALTER TABLE `players` ENABLE KEYS */;
 
 -- Dumping structure for table blackjack.player_hands
+DROP TABLE IF EXISTS `player_hands`;
 CREATE TABLE IF NOT EXISTS `player_hands` (
   `token` varchar(34) NOT NULL,
   `card_color` enum('C','D','H','S') NOT NULL,
