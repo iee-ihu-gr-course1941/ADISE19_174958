@@ -39,6 +39,8 @@
                         print "<li class='nav-item'><a href='#' class='nav-link' id='playButton'>Play</a></li>";
                         print "<li class='nav-item'><a href='#' class='nav-link'>Rank</a></li>";
                         print "<li class='nav-item'><a href='#' id='logoutBtn' class='nav-link'>Logout</a></li>";
+                        print "<script src=\"js/logout.js\" ></script>";
+                        print "<script src=\"js/joinGame.js\"></script>";
                     }else{
                         print "<li class='nav-item'><a href='signIn.php' class='nav-link'>Sign In</a></li>";
                         print "<li class='nav-item'><a href='signUp.php' class='nav-link'>Sign Up</a></li>";
@@ -50,8 +52,6 @@
         </nav>
     </div>
 
-    <script src="js/logout.js" ></script>
-    <script src="js/play.js" ></script>
 <?php
 
 ?>

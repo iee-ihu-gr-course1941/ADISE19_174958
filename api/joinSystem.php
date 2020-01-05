@@ -5,6 +5,7 @@ require_once "../database/variables.php";
 function join_game()
 {
     findGame();
+    print "play.php";
 }
 
 

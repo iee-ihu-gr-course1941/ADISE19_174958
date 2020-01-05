@@ -1,19 +1,12 @@
 var updater = null;
-$("#playButton").click(function () {
-    $.ajax("api/engine.php/join", {
-        type: "GET",
-        success: join
-    });
 
-});
-
-function join(response, status, xhr) {
+$(function () {
     $(".content").removeClass("disappear");
     $.ajax("api/engine.php/token", {
         type: "GET",
         success: assignToken
     });
-}
+});
 
 function assignToken(response, status, xhr) {
     let token = JSON.parse(response);

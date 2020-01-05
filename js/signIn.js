@@ -17,7 +17,6 @@ function signInHandler() {
 }
 
 function handleError(xhr, status, error) {
-    console.log(xhr.responseText);
     $(".message").removeClass("alert-success").addClass("alert-danger").html("<strong>Error!</strong>"+xhr.responseText);
 }
 
@@ -26,7 +25,6 @@ function successful_login(result, status, xhr) {
         "<strong>Successful login! </strong>You will be redirected in a few seconds"
     );
     setTimeout(function () {
-        console.log(result);
         document.location.href = result;
     }, 3000);
 }
