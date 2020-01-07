@@ -186,7 +186,7 @@ class View {
     }
 
     _renderGame() {
-        this._removeOldCardsOfComputer();
+        this._removeOldCards(this.controller.game.cards, "computer");
 
         $(".gameView").removeClass(".disappear");
         $(".computer-status").html("Game's Status : " + this.game.status);
@@ -289,8 +289,7 @@ class View {
 
         for (let player of this.game.players) {
 
-            this._removeOldCardsOfPlayer(player);
-
+            this._removeOldCards(player.cards,player.username);
             $(`.${player.username}-status`).html("Status : " + player.status);
             $(`.${player.username}-money`).html("Money : " + player.balance);
             $(`.${player.username}-points`).html("Points : " + player.points);
@@ -324,37 +323,23 @@ class View {
         });
     }
 
-    _removeOldCardsOfPlayer(player){
-        let currentCards = this._getCards(player.username);
-        let oldCards = currentCards.filter((card)=>{
-            for (let newCard of player.cards) {
-                if (newCard === card) {
+    _removeOldCards(currentCards,clazz) {
+        let newCards = this._getCards(clazz);
+
+        let oldCards = newCards.filter((card)=>{
+            for (let currentCard of currentCards) {
+                if (currentCard === card) {
                     return false;
                 }
             }
             return true;
         });
         oldCards.forEach(card =>{
-            let removedImage = document.getElementsByClassName(`${player.username}-cards`)[0].getElementsByClassName(`${card}`)[0];
-            removedImage.parentNode.removeChild(removedImage);
-        } );
-    }
-
-    _removeOldCardsOfComputer(){
-        let currentCards = this._getCards("computer");
-
-        let oldCards = currentCards.filter((card)=>{
-            for (let newCard of this.controller.game.cards) {
-                if (newCard === card) {
-                    return false;
-                }
-            }
-            return true;
-        });
-
-        oldCards.forEach(card =>{
-            let removedImage = document.getElementsByClassName(`computer-cards`)[0].getElementsByClassName(`${card}`)[0];
-            removedImage.parentNode.removeChild(removedImage);
+            console.log(document.getElementsByClassName(`${clazz}-cards`)[0].getElementsByClassName(`${card}`));
+            let removedImage = document.getElementsByClassName(`${clazz}-cards`)[0].getElementsByClassName(`${card}`)[0];
+            $(removedImage).fadeOut(1000,function () {
+                removedImage.parentNode.removeChild(removedImage);
+            })
         } );
     }
 
