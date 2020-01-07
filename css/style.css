@@ -22,3 +22,7 @@
 .bet_input{
     min-width: 300px;
 }
+
+.my_card{
+    position: relative;
+}

@@ -18,7 +18,6 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
 
 
-    <title>Title</title>
 </head>
 <body>
 <div class="container-fluid">

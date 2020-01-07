@@ -302,8 +302,31 @@ class View {
                 }
                 return true;
             });
+
             for (let card of cards) {
-                $(`.${player.username}-cards`).append(`<img src="${card}" class="img-fluid my_card p-1 ${card} my-card"/>`);
+                $(`.${player.username}-cards`).append(`<img src="${card}" class="img-fluid my_card p-1 disappear ${card} my-card"/>`);
+
+                $(".showCardArea").append(`<img src="${card}" class="img-fluid my_card p-1 ${card} my-card"/>`);
+
+                let image = $(".showCardArea").find(`.my-card`);
+
+                let y = $(`.${player.username}-cards`).offset().top;
+                let x = $(`.${player.username}-cards`).offset().left;
+
+                $(image).animate({
+                    top:y,
+                    left:x
+                },2000,null,()=>{//500millis is important because of the timing of ajax requests.
+                    $(image).remove();
+                    let images = $("img");
+                    for (let img of images) {
+                        if ($(img).hasClass("disappear")) {
+                            $(img).removeClass("disappear");
+                        }
+                    }
+                });
+
+
             }
 
         }
