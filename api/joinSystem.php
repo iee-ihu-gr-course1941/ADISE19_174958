@@ -8,12 +8,16 @@ function join_game()
     print "play.php";
 }
 
-
+/**
+ * Assigns new token(if player doesn't participate in any game) to the user,which is identical to the user becoming a player.
+ */
 function findGame(){
     assignToken();
 }
 
-
+/**
+ * Checks if user has token.If doesn't,assigns new token to the user.
+ */
 function assignToken(){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
@@ -33,7 +37,10 @@ function assignToken(){
 
 }
 
-
+/**
+ * Creates new token for the user and inserts him/her into a randomly found game.Specifically,if game with empty seats exists,inserts the player
+ * into this game;otherwise,created new game and inserts the user into the newly created game.
+ */
 function create_token(){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
@@ -60,7 +67,9 @@ function create_token(){
     $connection->close();
 }
 
-
+/**
+ * @return array a random game that has empty seats or a newly created game.
+ */
 function getRandomGame()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
@@ -86,6 +95,9 @@ function getRandomGame()
     return $game;
 }
 
+/**
+ * Creates new game with 0 points,0 players and in initialized status.
+ */
 function createNewGame()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
@@ -100,6 +112,10 @@ function createNewGame()
 
 }
 
+/**
+ * Takes cards from cards table and inserts them into the game cards table for the given game.
+ * @param $gameID the game id of the game.
+ */
 function insertCards($gameID){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
@@ -120,6 +136,10 @@ function insertCards($gameID){
 
 }
 
+/**
+ * Increases the number of players for the game wit the given game id by one.
+ * @param $game_id
+ */
 function increasePlayers($game_id){
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
 
@@ -128,9 +148,6 @@ function increasePlayers($game_id){
     $mysqli_stmt -> bind_param("i",$game_id);
 
     if(!$mysqli_stmt -> execute()){
-//        foreach ($connection->error_list as $error) {
-//            print_r($error);
-//        }
         http_response_code(500);
         exit();
     }

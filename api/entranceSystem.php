@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * Destroys the session.
+ */
 function logout(){
 
     session_destroy();
@@ -7,6 +10,11 @@ function logout(){
     print "index.php";
 }
 
+/**
+ * Sign ins the the user give the username and password.If no user found with these credentials,return an error(400 status code).
+ * @param $user_name
+ * @param $pass_word
+ */
 function signIn($user_name,$pass_word){
     require_once "../database/variables.php";
 
@@ -31,6 +39,12 @@ function signIn($user_name,$pass_word){
     $connection->close();
 }
 
+/**
+ * Inserts new user into the storage.If user with the given username already exists,return an error(400 status code).
+ * If the password doesn't have valid length,returns an error(400 status code).
+ * @param $user_name
+ * @param $pass_word
+ */
 function signUp($user_name,$pass_word){
     require_once "../database/variables.php";
 

@@ -4,9 +4,7 @@ require_once "joinSystem.php";
 require_once "gameSystem.php";
 require_once "../database/variables.php";
 
-updateGames();//update each game's status
-
-session_start();
+session_start();//start session to be able to user user's username saved in the session.
 
 $inputJSON = json_decode(file_get_contents('php://input'), TRUE);
 
@@ -40,14 +38,14 @@ switch ($request[0]) {
         break;
     default:
         $token = getToken();
-        markLeftPlayers();//delete players that are in betting or hitting status and haven't played for 2 minutes or more.
+        markLeftPlayers();
+        updateGames();
 
         switch ($request[0]) {
             case "game":
                 game();
                 break;
             case "bet":
-                $method = $_SERVER['REQUEST_METHOD'];
                 if ($method === 'POST') {
                     if (!isset($_POST['amount'])) {
                         http_response_code(400);
@@ -86,7 +84,9 @@ function markPlayerAsLeft($token)
     $connection->close();
 }
 
-
+/**
+ * Marks all the players as left players who are in betting or hitting state and  haven't been active for more than one minute.
+ */
 function markLeftPlayers()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
@@ -98,6 +98,12 @@ function markLeftPlayers()
     $connection->close();
 }
 
+/**
+ * Decreases the number of the game with the given game id by the given num parameters.
+ * @param $num
+ * @param $gameId
+ * @param $connection
+ */
 function decreasePlayers($num, $gameId, $connection)
 {
 
@@ -117,6 +123,9 @@ function isLogin()
     }
 }
 
+/**
+ * For each active game,calls a function appropriate to its status and condition.
+ */
 function updateGames()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
@@ -127,14 +136,8 @@ function updateGames()
 
     $mysqli_result = $selectGames->get_result();
 
-    $selectPlayingPlayers = $connection->prepare("SELECT COUNT(*) as players_playing FROM players WHERE player_status != 'waiting' AND player_status != 'left_game' AND game_id = ? ");
-    while ($row = $mysqli_result->fetch_assoc()) {
-        $selectPlayingPlayers->bind_param("i",$row["game_id"]);
-        $selectPlayingPlayers->execute();
-        $numOfPlayersPlaying = $selectPlayingPlayers->get_result();
-        $numberOfNotWaitingPlayers = $numOfPlayersPlaying ->fetch_assoc()["players_playing"];
-
-        if ( ($row["games_status"] === "initialized" || $numberOfNotWaitingPlayers == 0) && $row['past_since_initialized'] >= 10 ) {
+     while ($row = $mysqli_result->fetch_assoc()) {
+        if ( $row["games_status"] === "initialized" && $row['past_since_initialized'] >= 10 ) {
             prepareGame($row["game_id"],$connection);
         } else if ($row["games_status"] === "betting") {
             checkBetting($row["game_id"],$connection);
@@ -142,56 +145,62 @@ function updateGames()
             checkPlayersTurn($row["game_id"],$connection);
         } else if ($row['games_status'] === "computer_turn") {
             checkComputerTurn($row["game_id"],$connection);
-        } else if ($row["games_status"] === "end_game") {
-            checkEndGame($row["game_id"],$connection);
-        }
+        } else if ($row["games_status"] === "end_game" ) {
+            checkEndGame($row["game_id"],$connection );
+        } 
     }
 
     $connection->close();
 }
 
+/**
+ * Prepares the game for the game with the given game id by :
+ * 1)Updating all the cards of the game as not taken
+ * 2)Deleting all left players and decreasing the number of seats by the number of players found in left state.
+ * 3)Deleting all previously owned cards.
+ * 4)Deleting all cards owned by the player and their bets(if any).
+ * 5)Updating game's status to betting and game's points to zero.
+ * 6)Updating each player by setting their status to betting,points to zero and by updating their last action column.
+ * @param $game_id
+ * @param $connection
+ */
 function prepareGame($game_id, $connection)
 {
-    $markGameCardsAsNotTaken = $connection->prepare("UPDATE game_cards SET taken = false WHERE game_id = ?");
-    $markGameCardsAsNotTaken->bind_param("i",$game_id);
-    $markGameCardsAsNotTaken->execute();
-
-    $deleteLeftPlayers = $connection->prepare("DELETE FROM players WHERE game_id = ? AND player_status ='left_game' ");
-    $deleteLeftPlayers->bind_param("i",$game_id);
-    $deleteLeftPlayers->execute();
-    decreasePlayers($deleteLeftPlayers->affected_rows,$game_id,$connection);
-
-    $deleteComputersCards = $connection->prepare("DELETE FROM computer_hands WHERE game_id = ? ");
-    $deleteComputersCards->bind_param("i",$game_id);
-    $deleteComputersCards->execute();
-
     $selectRemainingTokens = $connection->prepare("SELECT token FROM players WHERE game_id = ? ");
     $selectRemainingTokens->bind_param("i",$game_id);
     $selectRemainingTokens->execute();
     $resultTokens = $selectRemainingTokens->get_result();
 
-    $deletePlayersCards = $connection->prepare("DELETE FROM player_hands WHERE token = ? ");
-    $deletePlayersBets = $connection->prepare("DELETE FROM bets WHERE token = ?");
-
-    while ($token = $resultTokens->fetch_assoc()) {
-        $deletePlayersBets->bind_param("s",$token["token"]);
-        $deletePlayersBets->execute();
-
-        $deletePlayersCards->bind_param("s", $token["token"]);
-        $deletePlayersCards->execute();
-    }
-
-    $updateGamePoints = $connection->prepare("UPDATE games SET points = 0 WHERE game_id = ?");
-    $updateGamePoints->bind_param("i",$game_id);
-    $updateGamePoints->execute();
+    $insertPlayerCard = $connection->prepare("INSERT INTO player_hands(token,card_color,card_value) VALUES(?,?,?)");
+    $updatePlayerPoints = $connection->prepare("UPDATE players SET points = points + ? WHERE token = ?");
 
     changeStatusTo($game_id,'betting',$connection);
 
-    $updatePlayersStatus = $connection->prepare("UPDATE players SET player_status = 'betting',last_action = NOW(),points = 0 WHERE game_id = ?");
+    $updatePlayersStatus = $connection->prepare("UPDATE players SET player_status = 'betting',last_action = NOW() WHERE game_id = ?");
     $updatePlayersStatus->bind_param("i",$game_id);
     $updatePlayersStatus->execute();
 
+    while ($token = $resultTokens->fetch_assoc()) {
+        $currentPoints = 0;
+        for ($index = 0; $index < 2; $index++) {
+            $card = getCard($game_id, $connection);
+            $points = getPoints($card,$currentPoints,$connection);
+            $currentPoints += $points;
+            $insertPlayerCard->bind_param("sss",$token["token"],$card["card_color"],$card["card_value"]);
+            $updatePlayerPoints->bind_param("is",$points,$token["token"]);
+            $insertPlayerCard->execute();
+            $updatePlayerPoints->execute();
+        }
 
+    }
+
+    $insertGameCard = $connection->prepare("INSERT INTO computer_hands(game_id, card_color, card_value) VALUES(?,?,?)");
+    $increaseGamePoints = $connection->prepare("UPDATE games SET points = points + ? WHERE game_id = ?");
+    $computerCard = getCard($game_id, $connection);
+    $increaseGamePoints->bind_param("ii", $computerCard["points"], $game_id);
+    $insertGameCard->bind_param("iss",$game_id,$computerCard["card_color"],$computerCard["card_value"]);
+    $insertGameCard->execute();
+    $increaseGamePoints->execute();
 }
 
 function checkBetting($game_id,$connection)
@@ -209,16 +218,18 @@ function checkBetting($game_id,$connection)
 
 }
 
-
 function checkPlayersTurn($game_id,$connection)
 {
-    $checkIfAllPlayersDone = $connection->prepare("SELECT * FROM players WHERE (player_status = 'hitting' OR player_status = 'done_betting') AND game_id = ?");
+    $checkIfAllPlayersDone = $connection->prepare("SELECT * FROM players WHERE (player_status = 'hitting' OR player_status = 'done_betting') AND points < 21 AND game_id = ?");
     $checkIfAllPlayersDone->bind_param("i", $game_id);
     $checkIfAllPlayersDone->execute();
 
     $result = $checkIfAllPlayersDone->get_result();
 
     if ($result->num_rows == 0) {
+        $updateStatus = $connection->prepare("UPDATE players SET player_status = 'done_hitting' WHERE game_id = ?");
+        $updateStatus->bind_param("i",$game_id);
+        $updateStatus->execute();
         changeStatusTo($game_id, "computer_turn",$connection);
     } else {
         $isTherePlayerPlaying = $connection->prepare("SELECT * FROM players WHERE player_status = 'hitting' ");
@@ -288,11 +299,51 @@ function checkEndGame($gameId, $connection)
         $updateBalance->execute();
     }
 
-    $updateAllPlayersToWaitingStatus  = $connection->prepare("UPDATE players SET player_status = 'waiting' WHERE game_id = ? AND player_status != 'left_game'");
+    $updateAllPlayersToWaitingStatus  = $connection->prepare("UPDATE players SET player_status = 'waiting',points = 0 WHERE game_id = ? AND player_status != 'left_game'");
     $updateAllPlayersToWaitingStatus->bind_param("i", $gameId);
     $updateAllPlayersToWaitingStatus->execute();
 
+    $markGameCardsAsNotTaken = $connection->prepare("UPDATE game_cards SET taken = false WHERE game_id = ?");
+    $markGameCardsAsNotTaken->bind_param("i",$gameId);
+    $markGameCardsAsNotTaken->execute();
+
+    clearGame($gameId,$connection);
+
     changeStatusTo($gameId,"initialized",$connection);
+
+}
+
+function clearGame($gameId,$connection){
+
+    $deleteLeftPlayers = $connection->prepare("DELETE FROM players WHERE game_id = ? AND player_status ='left_game' ");
+    $deleteLeftPlayers->bind_param("i",$gameId);
+    $deleteLeftPlayers->execute();
+    decreasePlayers($deleteLeftPlayers->affected_rows,$gameId,$connection);
+
+    $deleteComputersCards = $connection->prepare("DELETE FROM computer_hands WHERE game_id = ? ");
+    $deleteComputersCards->bind_param("i",$gameId);
+    $deleteComputersCards->execute();
+
+    $selectRemainingTokens = $connection->prepare("SELECT token FROM players WHERE game_id = ? ");
+    $selectRemainingTokens->bind_param("i",$gameId);
+    $selectRemainingTokens->execute();
+    $resultTokens = $selectRemainingTokens->get_result();
+
+    $deletePlayersCards = $connection->prepare("DELETE FROM player_hands WHERE token = ? ");
+    $deletePlayersBets = $connection->prepare("DELETE FROM bets WHERE token = ?");
+
+    $updateGamePoints = $connection->prepare("UPDATE games SET points = 0 WHERE game_id = ?");
+    $updateGamePoints->bind_param("i",$gameId);
+    $updateGamePoints->execute();
+
+    while ($token = $resultTokens->fetch_assoc()) {
+
+        $deletePlayersBets->bind_param("s", $token["token"]);
+        $deletePlayersBets->execute();
+
+        $deletePlayersCards->bind_param("s", $token["token"]);
+        $deletePlayersCards->execute();
+    }
 
 }
 

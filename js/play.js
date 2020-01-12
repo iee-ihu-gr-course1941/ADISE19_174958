@@ -77,6 +77,36 @@ class Controller {
         this._play();
     }
 
+    hit() {
+        $.ajax("api/engine.php/hit", {
+            beforeSend: (xhr) => {
+                xhr.setRequestHeader("TOKEN", this.token);
+            }
+        })
+    }
+
+    bet(bet) {
+        $.ajax("api/engine.php/bet", {
+            type: "POST",
+            data: {
+                amount: bet
+            },
+            beforeSend: (xhr) => xhr.setRequestHeader("TOKEN", this.token)
+        });
+    }
+
+    canBet(bet){
+        return bet > 0 && bet <= this.game.user.balance;
+    }
+
+    enough() {
+        $.ajax("api/engine.php/enough", {
+            beforeSend: (xhr) => {
+                xhr.setRequestHeader("TOKEN", this.token);
+            }
+        })
+    }
+
     _needToExit() {
         return this.game.user === null;
     }
@@ -99,39 +129,9 @@ class Controller {
         this.view.showBettingWindow();
     }
 
-    bet(bet) {
-        $.ajax("api/engine.php/bet", {
-            type: "POST",
-            data: {
-                amount: bet
-            },
-            beforeSend: (xhr) => xhr.setRequestHeader("TOKEN", this.token)
-        });
-    }
-
-    canBet(bet){
-        return bet > 0 && bet <= this.game.user.balance;
-    }
-
     _tryHitting() {
         this.hittingWindowOn = true;
         this.view.showHittingWindow();
-    }
-
-    hit() {
-        $.ajax("api/engine.php/hit", {
-            beforeSend: (xhr) => {
-                xhr.setRequestHeader("TOKEN", this.token);
-            }
-        })
-    }
-
-    enough() {
-        $.ajax("api/engine.php/enough", {
-            beforeSend: (xhr) => {
-                xhr.setRequestHeader("TOKEN", this.token);
-            }
-        })
     }
 
 
@@ -145,12 +145,7 @@ class View {
     }
 
     render() {
-        this._clear();
         this._renderGame();
-
-        for (let card of this.game.cards) {
-            $(".computer-cards").append(`<img src="${card}" ${card} class="img-fluid my_card p-1"/>`);
-        }
 
         for (let player of this.game.players) {
             this._renderPlayer(player);
@@ -181,38 +176,32 @@ class View {
         $(`.bet_input.${this.controller.game.user.username}`).hide(1000);
     }
 
-    close() {
-        this._clear();
-    }
-
     _renderGame() {
-        this._removeOldCards(this.controller.game.cards, "computer");
-
         $(".gameView").removeClass(".disappear");
         $(".computer-status").html("Game's Status : " + this.game.status);
         $(".computer-points").html("Points : " + this.game.points);
 
-        let cards = this.game.cards.filter((card) => {
-            for (let existingCard of $(`.computer-cards`).children(".my_card")) {
-                if ($(existingCard).hasClass(card)) {
-                    return false;
-                }
-            }
-            return true;
+        let result = this._filterElements(this.controller.game.cards,this._getCards("computer"));
 
-        });
-
-        for (let card of cards) {
+        for (let card of result.toRender) {
             $(".computer-cards").append(`<img src="${card}" class="img-fluid my_card p-1 ${card}"/>`);
+        }
+
+        for (let card of result.toRemove) {
+            let removedImage = document.getElementsByClassName("computer-cards")[0].getElementsByClassName(`${card}`)[0];
+            $(removedImage).fadeOut(1000,function () {
+                removedImage.parentNode.removeChild(removedImage);
+            })
         }
 
     }
 
-    _clear() {
+    close() {
         $(".computer-status").empty();
         $(".computer-points").empty();
         $(".computer-cards").empty();
         $(".players").empty();
+        $(".gameView").addClass(".disappear");
     }
 
     _renderPlayer(player) {
@@ -269,49 +258,48 @@ class View {
     update(game) {
         let oldPlayers = this.game.players;
         this.game = game;
-
         this._renderGame();
-        this._removeLeftPlayers(oldPlayers);
 
-        let newPlayers = this.game.players.filter((player) => {
-            for (let oldPlayer of oldPlayers) {
-                if (oldPlayer.username === player.username) {
-                    return false;
+        let playersResult = this._filterElements(this.game.players.map( (player) => {return player.username}) , oldPlayers.map( (oldPlayer)=>{return oldPlayer.username} ) );
+
+        let newPlayers = playersResult.toRender.map((username)=>{
+            for (let player of this.game.players) {
+                if (player.username === username) {
+                    return player;
                 }
             }
-            return true;
         });
 
         for (let player of newPlayers) {
             this._renderPlayer(player);
         }
 
+        for (let username of playersResult.toRemove) {
+            $(`.${username}-player`).remove();
+        }
 
         for (let player of this.game.players) {
+            let cardsResult = this._filterElements(player.cards,this._getCards(player.username));
 
-            this._removeOldCards(player.cards,player.username);
+            for (let cardToRemove of cardsResult.toRemove) {
+                let removedImage = document.getElementsByClassName(`${player.username}-cards`)[0].getElementsByClassName(`${cardToRemove}`)[0];
+                $(removedImage).fadeOut(1000,function () {
+                    removedImage.parentNode.removeChild(removedImage);
+                }) }
+
             $(`.${player.username}-status`).html("Status : " + player.status);
             $(`.${player.username}-money`).html("Money : " + player.balance);
             $(`.${player.username}-points`).html("Points : " + player.points);
 
-            let cards = player.cards.filter((card) => {
-                for (let existingCard of $(`.${player.username}-cards`).children(".my_card")) {
-                    if ($(existingCard).hasClass(card)) {
-                        return false;
-                    }
-                }
-                return true;
-            });
-
-            for (let card of cards) {
+            for (let card of cardsResult.toRender) {
                 $(`.${player.username}-cards`).append(`<img src="${card}" class="img-fluid my_card p-1 disappear ${card} my-card"/>`);
 
                 $(".showCardArea").append(`<img src="${card}" class="img-fluid my_card p-1 ${card} my-card"/>`);
 
                 let image = $(".showCardArea").find(`.my-card`);
 
-                let y = $(`.${player.username}-cards`).offset().top;
-                let x = $(`.${player.username}-cards`).offset().left;
+                let y = $(".showCardArea").offset().top;
+                let x = $(".showCardArea").offset().left/4;
 
                 $(image).animate({
                     top:y,
@@ -333,39 +321,6 @@ class View {
 
     }
 
-    _removeLeftPlayers(oldPlayers) {
-        oldPlayers.filter((oldPlayer) => {
-            for (let player of this.game.players) {
-                if (player.username === oldPlayer.username) {
-                    return false;
-                }
-            }
-            return true;
-        }).forEach((leftPlayer) => {
-            $(`.${leftPlayer.username}-player`).remove();
-        });
-    }
-
-    _removeOldCards(currentCards,clazz) {
-        let newCards = this._getCards(clazz);
-
-        let oldCards = newCards.filter((card)=>{
-            for (let currentCard of currentCards) {
-                if (currentCard === card) {
-                    return false;
-                }
-            }
-            return true;
-        });
-        oldCards.forEach(card =>{
-            console.log(document.getElementsByClassName(`${clazz}-cards`)[0].getElementsByClassName(`${card}`));
-            let removedImage = document.getElementsByClassName(`${clazz}-cards`)[0].getElementsByClassName(`${card}`)[0];
-            $(removedImage).fadeOut(1000,function () {
-                removedImage.parentNode.removeChild(removedImage);
-            })
-        } );
-    }
-
     _getCards(cssClazz){
         let cards = new Array();
 
@@ -382,5 +337,39 @@ class View {
 
         return cards;
 
+    }
+
+    _filterElements(newElements, oldElements){
+        let keep = Array();
+        let remove = Array();
+        let render = Array();
+
+        for (let oldElement of oldElements) {
+            let found = false;
+
+            for(let newElement of newElements){
+                if(newElement === oldElement){
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                keep.push(oldElement);
+            }else{
+                remove.push(oldElement);
+            }
+        }
+
+        render = newElements.filter((newElement)=>{
+            return !keep.some((keepElement)=>{
+               return keepElement === newElement;
+            });
+        });
+
+        return {
+            toRender:render,
+            toRemove:remove,
+            toKeep:keep
+        }
     }
 }

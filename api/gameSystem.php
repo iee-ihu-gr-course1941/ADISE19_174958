@@ -2,6 +2,10 @@
 
 require_once "../database/variables.php";
 
+/**
+ * Returns the token of the sign in user.
+ * If token is not assigned,returns an error(404 status code).
+ */
 function token()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
@@ -287,7 +291,9 @@ function getCard($gameId,$connection){
 
     $randomCardNum = rand(0, $cardsLeft);
 
-    $randomCard = $connection->prepare("SELECT card_color,card_value FROM game_cards WHERE game_id = ? AND taken = false LIMIT 1 OFFSET ?");
+    $randomCard = $connection->prepare("SELECT gc.card_color as card_color,gc.card_value as card_value,points FROM game_cards gc 
+                                        INNER JOIN cards_points cp on gc.card_color = cp.card_color AND cp.card_value = gc.card_value 
+                                        WHERE game_id = ? AND taken = false LIMIT 1 OFFSET ?");
     $randomCard->bind_param("ii",$gameId,$randomCardNum);
     $randomCard->execute();
     $card = $randomCard->get_result()->fetch_assoc();
@@ -319,7 +325,10 @@ function getPoints($card, $currentPoints,$connection)
     return $points;
 }
 
-
+/**
+ * Returns the token that must be inside the request header by name TOKEN.If not found,return an error(400 status code).
+ * @return mixed
+ */
 function getToken(){
     $token = apache_request_headers()["TOKEN"];
 

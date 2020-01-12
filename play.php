@@ -24,7 +24,7 @@ require_once "header.php"
             </div>
         </div>
 
-        <div class="row splitter d-flex justify-content-center ml-0 mt-2 ">
+        <div class="row splitter d-flex justify-content-center m-2 ">
 
         </div>
 
