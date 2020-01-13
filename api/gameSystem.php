@@ -30,7 +30,30 @@ function token()
     $connection->close();
 }
 
-
+/**
+ * Prints the game in json format as follows:
+ * {
+ *"status": <<Status of the game>>,
+ *"players": <<An array of players in the given format:\
+ *          [
+ *              {
+ *                  "username": <<Username of the first player>>,
+ *                  "status": <<Status of the first player>>,
+ *                  "points": <<Points of the first player>>,
+ *                  "balance": <<Balance of the first player>>,
+ *                  "cards": [<<An array of strings representing the urls to the images of the cards of the first player>>]
+ *              }
+ *          ],
+ *"points": <<The points of the game>>,
+ *"cards": [<<An array of strings represeting the urls to the images of the cards of the computer],
+ *"user": <<An user that is requesting the game in the following format>>{
+ *"username": <<Username of the user>>,
+ *"status": <<Status of the user>>,
+ *"balance": <<Balance of the user>>
+ *}
+ *}
+ *
+ */
 function game()
 {
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
@@ -65,6 +88,12 @@ function game()
 
 }
 
+/**
+ * Returns a map array containing all the players of the game with the given game id.
+ * @param $gameId
+ * @param $connection
+ * @return array
+ */
 function getPlayers($gameId,$connection)
 {
     $players = array();
@@ -111,6 +140,12 @@ function getPlayers($gameId,$connection)
     return $players;
 }
 
+/**
+ * Returns a map array containing information about the status and points of the game with the given id.
+ * @param $gameId
+ * @param $connection
+ * @return mixed
+ */
 function getGame($gameId,$connection)
 {
 
@@ -123,6 +158,12 @@ function getGame($gameId,$connection)
     return $selectStatus->get_result()->fetch_assoc();
 }
 
+/**
+ * Returns a map array containing urls to the images of the cards of the computer of the given game id.
+ * @param $gameId
+ * @param $connection
+ * @return array
+ */
 function getGameCards($gameId,$connection)
 {
     $computerHand = $connection->prepare("SELECT CONCAT('imgs/',image_name,'.png') as card FROM computer_hands ch INNER JOIN cards_images ci ON ci.card_color = ch.card_color AND ci.card_value = ch.card_value WHERE game_id = ?");
@@ -140,7 +181,12 @@ function getGameCards($gameId,$connection)
     return $cards;
 }
 
-
+/**
+ * Returns the game id of the game to which the player with the given token belongs.
+ * @param $token
+ * @param $connection
+ * @return mixed
+ */
 function getPlayersGameId($token, $connection)
 {
     $mysqli_stmt = $connection->prepare("SELECT game_id FROM players WHERE token = ?");
@@ -152,6 +198,12 @@ function getPlayersGameId($token, $connection)
     return $mysqli_stmt->get_result()->fetch_assoc()['game_id'];
 }
 
+/**
+ * Returns a map array containing the information of the player with the given token.
+ * @param $token
+ * @param $connection
+ * @return mixed
+ */
 function getPlayer($token, $connection){
     $selectUser = $connection->prepare("SELECT p.user_name as username,player_status as status ,balance FROM players p INNER JOIN my_users mu on p.user_name = mu.user_name WHERE token = ? ");
     $selectUser->bind_param("s", $token);
@@ -160,6 +212,10 @@ function getPlayer($token, $connection){
     return $selectUser->get_result()->fetch_assoc();
 }
 
+/**
+ * Updates the balance and bet of the player betting using the given amount.If the player can't bet the given amount,returns an error(400 status code).
+ * @param $amount
+ */
 function bet($amount){
 
     $connection = mysqli_connect(HOST, USER, PASSWORD, DATABASE,null,SOCKET);
@@ -196,6 +252,9 @@ function bet($amount){
     $connection->close();
 }
 
+/**
+ * Updates the status of the player to done_hitting
+ */
 function enough(){
     $token = getToken();
 
@@ -217,6 +276,11 @@ function enough(){
 
 }
 
+/**
+ * Gets a cards and inserts it into the hand of the player hitting.If the player can't hit,return an error(401 status code).
+ * Updates points of the player and his/her status.If player reached 21 points ,changes his/her status to done_hitting;if overflow 21 points,changes
+ * the status to overflow.
+ */
 function hit(){
     $token = getToken();
 
@@ -255,6 +319,12 @@ function hit(){
 
 }
 
+/**
+ * Returns true if the player with the given token can hit.
+ * @param $token
+ * @param $connection
+ * @return bool
+ */
 function isInHittingStatus($token,$connection){
 
     $check = $connection->prepare("SELECT * FROM players WHERE token = ? AND player_status = 'hitting'");
@@ -265,6 +335,13 @@ function isInHittingStatus($token,$connection){
     return $mysqli_result->num_rows !== 0;
 }
 
+/**
+ * Returns true if the player with the given token can bet the given amount.
+ * @param $amount
+ * @param $token
+ * @param $connection
+ * @return bool
+ */
 function canBet($amount,$token,$connection)
 {
     $question = $connection->prepare("SELECT * FROM players p INNER JOIN my_users u ON p.user_name = u.user_name WHERE token = ? AND player_status = 'betting' AND (balance - ?) >= 0");
@@ -274,6 +351,11 @@ function canBet($amount,$token,$connection)
     return $question->get_result()->num_rows !== 0;
 }
 
+/**
+ * Updates the last_action column of the players table for the player with the given token.
+ * @param $token
+ * @param $connection
+ */
 function updateLastAction($token,$connection){
     $mysqli_stmt = $connection->prepare("UPDATE players SET last_action = NOW() WHERE token = ?");
 
@@ -283,6 +365,12 @@ function updateLastAction($token,$connection){
 
 }
 
+/**
+ * Return a map array containing a random card from the game cards.Updates the card taken an indicates that it has been taken.
+ * @param $gameId
+ * @param $connection
+ * @return mixed
+ */
 function getCard($gameId,$connection){
     $numOfCardsLeft = $connection->prepare("SELECT COUNT(*) as cardsLeft FROM game_cards WHERE game_id = ? AND taken = false");
     $numOfCardsLeft->bind_param("i",$gameId);
@@ -305,6 +393,13 @@ function getCard($gameId,$connection){
     return $card;
 }
 
+/**
+ * Accepts the carda taken,current amount of points and returns the points the given card has.
+ * @param $card
+ * @param $currentPoints
+ * @param $connection
+ * @return int|mixed
+ */
 function getPoints($card, $currentPoints,$connection)
 {
     $selectPointsOfCard = $connection->prepare("SELECT points FROM cards_points WHERE card_value = ? AND card_color = ? ");
