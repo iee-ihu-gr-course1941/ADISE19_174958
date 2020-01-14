@@ -46,3 +46,16 @@
 10. Ο προηγούμενος κανόνας σημαίνει οτι αν ο κρουπιέρης πάρει Άσσο και έξι(17 ή 7 πόντους),δεν μπορεί να πάρει άλλες κάρτες.
 11. Αν ο κρουπιέρης με την δεύτερη κάρτα μαζέψει 21 πόντους,τότε όλοι οι παίκτες που δεν έχουν Blackjack χάνουν τις προσφορές τους,ενω στους παίκτες που έχουν Blackjack επιστρέφονται οι προσφορές τους(κατάσταση push),εκτός και αν αποφάσισαν πριν να πάρουν κέρδος ίσο με την προσφορά(**βλέπε κανόνα 4.i**).
 12. Αν ο παίκτης και ο κρουπιέρης έχουν τον ίδιο αριθμό πόντων,τότε αυτή η κατάσταση ονομάζεται **“push”** και στον παίκτη επιστρέφεται η προσφορά.
+
+## API
+|PATH|METHOD|RETURN|REQUEST PARAMETERS|EXTRA HEADERS|
+|----|------|------|------------------|-------------|
+|/signIn|PUT|index.php,400(User not found)|user_name,pass_word|none|
+|/signUp|POST|200(Sucess),400(Validation error or username already used)|user_name,pass_word|none|
+|/logout|GET|index.php|none|none|
+|/join|GET|401(Unauthorized),play.php(success)|none|none|
+|/token|GET|401(Unauthorized),token(success),404(token not found)|none|none|
+|/game|GET|400(Missing Token),game in json forma(success)|none|TOKEN|
+|/bet|POST|400(Missing parameter,missing Token,unauthorized to bet or invalid amount),200(success)|amount|TOKEN|
+|/hit|PUT|400(Missing token),401(unauthorized to hit)|none|TOKEN|
+|/enough|PUT|400(Missing token),401(unauthorized to call)|none|TOKEN|
